@@ -104,6 +104,7 @@ func resourceAwsLbListener() *schema.Resource {
 						"order": {
 							Type:         schema.TypeInt,
 							Optional:     true,
+							Computed:     true,
 							ValidateFunc: validation.IntBetween(1, 50000),
 						},
 
@@ -367,14 +368,12 @@ func resourceAwsLbListenerCreate(d *schema.ResourceData, meta interface{}) error
 		defaultActionMap := defaultAction.(map[string]interface{})
 
 		action := &elbv2.Action{
-			Type: aws.String(defaultActionMap["type"].(string)),
+			Order: aws.Int64(int64(i + 1)),
+			Type:  aws.String(defaultActionMap["type"].(string)),
 		}
 
-		if order, ok := defaultActionMap["order"]; ok && order != 0 {
+		if order, ok := defaultActionMap["order"]; ok && order.(int) != 0 {
 			action.Order = aws.Int64(int64(order.(int)))
-		}
-		if len(defaultActions) != 1 && action.Order == nil {
-			return errors.New("when using more then one action, you need to specify 'order' for each action")
 		}
 
 		switch defaultActionMap["type"].(string) {
@@ -675,14 +674,12 @@ func resourceAwsLbListenerUpdate(d *schema.ResourceData, meta interface{}) error
 			defaultActionMap := defaultAction.(map[string]interface{})
 
 			action := &elbv2.Action{
-				Type: aws.String(defaultActionMap["type"].(string)),
+				Order: aws.Int64(int64(i + 1)),
+				Type:  aws.String(defaultActionMap["type"].(string)),
 			}
 
-			if order, ok := defaultActionMap["order"]; ok && order != 0 {
+			if order, ok := defaultActionMap["order"]; ok && order.(int) != 0 {
 				action.Order = aws.Int64(int64(order.(int)))
-			}
-			if len(defaultActions) != 1 && action.Order == nil {
-				return errors.New("when using more then one action, you need to specify 'order' for each action")
 			}
 
 			switch defaultActionMap["type"].(string) {
