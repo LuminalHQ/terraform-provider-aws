@@ -70,6 +70,7 @@ func resourceAwsLbTargetGroup() *schema.Resource {
 					elbv2.ProtocolEnumHttp,
 					elbv2.ProtocolEnumHttps,
 					elbv2.ProtocolEnumTcp,
+					elbv2.ProtocolEnumTls,
 					// TODO(grim): Use the appropriate
 					// ProtocolEnum* values when we update
 					// aws-sdk-go to a version that defines
