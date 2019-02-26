@@ -1,3 +1,34 @@
+## 2.0.0 (Unreleased)
+
+NOTES:
+
+* Full documentation about this update, including Terraform provider version pinning and configuration examples, can be found in the [Terraform AWS Provider Version 2 Upgrade Guide](https://www.terraform.io/docs/providers/aws/guides/version-2-upgrade.html)
+
+BREAKING CHANGES:
+
+* data-source/aws_ami: Require `owners` argument [GH-5576]
+* data-source/aws_ami_ids: Require `owners` argument [GH-5576]
+* data-source/aws_kms_secret: Remove data source (replaced with `aws_kms_secrets` data source) [GH-7657]
+* data-source/aws_lambda_function: Returns unqualified (no `:QUALIFIER` or `:VERSION` suffix) value in `arn` attribute by default and qualified (includes `:QUALIFIER` or `:VERSION` suffix) value in `qualified_arn` attribute. Previously the `arn` attribute included `:$LATEST` suffix by default which was not compatible with many other resources. To restore the previous default behavior, set the `qualifier` argument to `$LATEST` and reference the `qualified_arn` attribute. [GH-7663]
+* resource/aws_batch_compute_environment: Remove deprecated `ecc_cluster_arn` attribute (replaced with `ecs_cluster_arn` attribute) [GH-7708]
+* resource/aws_cloudfront_distribution: Remove deprecated `cache_behaviors` configuration block (replaced with `ordered_cache_behaviors` configuration block) [GH-7710]
+* resource/aws_elasticache_cluster: Remove deprecated `availability_zones` argument (replaced with `preferred_availability_zones` argument) [GH-7714]
+* resource/aws_instance: Remove deprecated top-level `network_interface_id` attribute [GH-1193] / [GH-7715]
+* resource/aws_instance: Remove hardcoded AWS China prevention of tagging on creation [GH-7654]
+* resource/aws_lambda_function: Setting `reserved_concurrent_executions` to `0` will now disable Lambda Function invocations, causing downtime for the Lambda Function. Previously `reserved_concurrent_executions` accepted `0` and below for unreserved concurrency, which means it was not previously possible to disable invocations. The argument now differentiates between a new value for unreserved concurrency (`-1`) and disabling Lambda invocations (`0`). If previously configuring this value to `0` for unreserved concurrency, update the configured value to `-1` or the resource will disable Lambda Function invocations on update. If previously unconfigured, the argument does not require any changes. See the [Lambda User Guide](https://docs.aws.amazon.com/lambda/latest/dg/concurrent-executions.html) for more information about concurrency.
+* resource/aws_route_table: Resource import no longer imports `aws_route`, `aws_route_table_association`, and `aws_main_route_table_association` resources into the Terraform state [GH-5657]
+* resource/aws_s3_bucket_object: Remove hardcoded AWS China prevention of tagging [GH-7654]
+
+ENHANCEMENTS:
+
+* data-source/aws_lambda_function: Add `tags` attribute [GH-7663]
+* resource/aws_lambda_function: Disable Lambda Function invocations by setting `reserved_concurrent_executions` to `0` [GH-3806]
+
+BUG FIXES:
+
+* data-source/aws_lambda_function: Properly return error for missing function [GH-7663]
+* resource/aws_vpn_connection: Remove configurability of read-only `customer_gateway_configuration`, `routes`, and `vgw_telemetry` attributes [GH-7636]
+
 ## 1.60.0 (February 22, 2019)
 
 ENHANCEMENTS:
