@@ -18,7 +18,9 @@ install:
 # go.googlesource.com so rate limits are higher when using `go get` to fetch
 # packages that live there.
 # See: https://github.com/golang/go/issues/12933
-- bash scripts/gogetcookie.sh
+
+# We cannoth use the Terraform cookie
+# - bash scripts/gogetcookie.sh
 - make tools
 
 script:
