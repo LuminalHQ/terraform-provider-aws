@@ -7,6 +7,8 @@ go:
 - "1.11.x"
 env:
   GOFLAGS=-mod=vendor
+  SWEEPARGS=-vet=off
+  TESTARGS=-vet=off
 
 git:
   depth: 1
@@ -24,7 +26,6 @@ script:
 - make test
 # disable things that wont work or arent needed on go1.11
 # - make vendor-status
-# - make vet
 # - make website-test
 
 matrix:
