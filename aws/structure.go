@@ -620,8 +620,7 @@ func flattenEcsVolumes(list []*ecs.Volume) []map[string]interface{} {
 		l := map[string]interface{}{
 			"name": *volume.Name,
 		}
-
-		if volume.Host.SourcePath != nil {
+		if volume.Host != nil && volume.Host.SourcePath != nil {
 			l["host_path"] = *volume.Host.SourcePath
 		}
 
