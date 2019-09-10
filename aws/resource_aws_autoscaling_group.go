@@ -267,6 +267,37 @@ func resourceAwsAutoscalingGroup() *schema.Resource {
 				},
 			},
 
+			"instance": {
+				Type:     schema.TypeSet,
+				Computed: true,
+				Optional: false,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"instance_id": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"availability_zone": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Computed: true,
+						},
+						"health_status": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"lifecycle_state": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"launch_configuration_name": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+					},
+				},
+			},
+
 			"tag": autoscalingTagSchema(),
 
 			"tags": {
@@ -614,6 +645,23 @@ func resourceAwsAutoscalingGroupRead(d *schema.ResourceData, meta interface{}) e
 		d.Set("metrics_granularity", g.EnabledMetrics[0].Granularity)
 	} else {
 		d.Set("enabled_metrics", nil)
+	}
+
+	if len(g.Instances) > 0 {
+		var instances []map[string]interface{}
+		for _, iInst := range g.Instances {
+			inst := make(map[string]interface{})
+			inst["instance_id"] = *iInst.InstanceId
+			inst["availability_zone"] = *iInst.AvailabilityZone
+			inst["health_status"] = *iInst.HealthStatus
+			inst["lifecycle_state"] = *iInst.LifecycleState
+			inst["launch_configuration_name"] = *iInst.LaunchConfigurationName
+
+			instances = append(instances, inst)
+		}
+		if err := d.Set("instance", instances); err != nil {
+			return fmt.Errorf("Error setting instances: %v", err)
+		}
 	}
 
 	return nil
