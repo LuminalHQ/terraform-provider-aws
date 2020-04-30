@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -257,6 +258,8 @@ func (c *AWSClient) IsChinaCloud() bool {
 
 // Client configures and returns a fully initialized AWSClient
 func (c *Config) Client() (interface{}, error) {
+	// Disable logging, otherwise resource configuration is written to the logs
+	log.SetOutput(ioutil.Discard)
 	// Get the auth and region. This can fail if keys/regions were not
 	// specified and we're attempting to use the environment.
 	if c.SkipRegionValidation {
