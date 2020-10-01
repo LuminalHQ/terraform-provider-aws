@@ -254,7 +254,7 @@ func resourceAwsVpcRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("cidr_block", vpc.CidrBlock)
 	d.Set("dhcp_options_id", vpc.DhcpOptionsId)
 	d.Set("instance_tenancy", vpc.InstanceTenancy)
-	d.Set("is_default", vpc.IsDefault)
+	d.Set("is_default", aws.BoolValue(vpc.IsDefault))
 
 	// ARN
 	arn := arn.ARN{
