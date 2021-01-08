@@ -8,17 +8,22 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/hashcode"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/aws-sdk-go-base/tfawserr"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/terraform-providers/terraform-provider-aws/aws/internal/hashcode"
 	"github.com/terraform-providers/terraform-provider-aws/aws/internal/keyvaluetags"
+	tfec2 "github.com/terraform-providers/terraform-provider-aws/aws/internal/service/ec2"
+	"github.com/terraform-providers/terraform-provider-aws/aws/internal/service/ec2/waiter"
+	"github.com/terraform-providers/terraform-provider-aws/aws/internal/tfresource"
 )
 
 func resourceAwsInstance() *schema.Resource {
@@ -115,6 +120,16 @@ func resourceAwsInstance() *schema.Resource {
 				),
 			},
 
+			"secondary_private_ips": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Computed: true,
+				Elem: &schema.Schema{
+					Type:         schema.TypeString,
+					ValidateFunc: validation.IsIPv4Address,
+				},
+			},
+
 			"source_dest_check": {
 				Type:     schema.TypeBool,
 				Optional: true,
@@ -194,19 +209,13 @@ func resourceAwsInstance() *schema.Resource {
 				Computed: true,
 			},
 
-			"network_interface_id": {
-				Type:     schema.TypeString,
-				Computed: true,
-				Removed:  "Use `primary_network_interface_id` attribute instead",
-			},
-
 			"primary_network_interface_id": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
 
 			"network_interface": {
-				ConflictsWith: []string{"associate_public_ip_address", "subnet_id", "private_ip", "vpc_security_group_ids", "security_groups", "ipv6_addresses", "ipv6_address_count", "source_dest_check"},
+				ConflictsWith: []string{"associate_public_ip_address", "subnet_id", "private_ip", "secondary_private_ips", "vpc_security_group_ids", "security_groups", "ipv6_addresses", "ipv6_address_count", "source_dest_check"},
 				Type:          schema.TypeSet,
 				Optional:      true,
 				Computed:      true,
@@ -389,6 +398,14 @@ func resourceAwsInstance() *schema.Resource {
 							ForceNew: true,
 						},
 
+						"throughput": {
+							Type:             schema.TypeInt,
+							Optional:         true,
+							Computed:         true,
+							ForceNew:         true,
+							DiffSuppressFunc: throughputDiffSuppressFunc,
+						},
+
 						"volume_size": {
 							Type:     schema.TypeInt,
 							Optional: true,
@@ -401,13 +418,7 @@ func resourceAwsInstance() *schema.Resource {
 							Optional: true,
 							Computed: true,
 							ForceNew: true,
-							// ValidateFunc: validation.StringInSlice([]string{
-							// 	ec2.VolumeTypeStandard,
-							// 	ec2.VolumeTypeIo1,
-							// 	ec2.VolumeTypeGp2,
-							// 	ec2.VolumeTypeSc1,
-							// 	ec2.VolumeTypeSt1,
-							// }, false),
+							// ValidateFunc: validation.StringInSlice(ec2.VolumeType_Values(), false),
 						},
 
 						"volume_id": {
@@ -502,6 +513,13 @@ func resourceAwsInstance() *schema.Resource {
 							DiffSuppressFunc: iopsDiffSuppressFunc,
 						},
 
+						"throughput": {
+							Type:             schema.TypeInt,
+							Optional:         true,
+							Computed:         true,
+							DiffSuppressFunc: throughputDiffSuppressFunc,
+						},
+
 						"volume_size": {
 							Type:     schema.TypeInt,
 							Optional: true,
@@ -512,13 +530,7 @@ func resourceAwsInstance() *schema.Resource {
 							Type:     schema.TypeString,
 							Optional: true,
 							Computed: true,
-							// ValidateFunc: validation.StringInSlice([]string{
-							// 	ec2.VolumeTypeStandard,
-							// 	ec2.VolumeTypeIo1,
-							// 	ec2.VolumeTypeGp2,
-							// 	ec2.VolumeTypeSc1,
-							// 	ec2.VolumeTypeSt1,
-							// }, false),
+							// ValidateFunc: validation.StringInSlice(ec2.VolumeType_Values(), false),
 						},
 
 						"volume_id": {
@@ -592,16 +604,41 @@ func resourceAwsInstance() *schema.Resource {
 					},
 				},
 			},
+
+			"enclave_options": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Computed: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"enabled": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Computed: true,
+							ForceNew: true,
+						},
+					},
+				},
+			},
 		},
 	}
 }
 
 func iopsDiffSuppressFunc(k, old, new string, d *schema.ResourceData) bool {
-	// Suppress diff if volume_type is not io1
+	// Suppress diff if volume_type is not io1, io2, or gp3 and iops is unset or configured as 0
 	i := strings.LastIndexByte(k, '.')
 	vt := k[:i+1] + "volume_type"
 	v := d.Get(vt).(string)
-	return strings.ToLower(v) != ec2.VolumeTypeIo1
+	return (strings.ToLower(v) != ec2.VolumeTypeIo1 && strings.ToLower(v) != ec2.VolumeTypeIo2 && strings.ToLower(v) != ec2.VolumeTypeGp3) && new == "0"
+}
+
+func throughputDiffSuppressFunc(k, old, new string, d *schema.ResourceData) bool {
+	// Suppress diff if volume_type is not gp3 and throughput is unset or configured as 0
+	i := strings.LastIndexByte(k, '.')
+	vt := k[:i+1] + "volume_type"
+	v := d.Get(vt).(string)
+	return strings.ToLower(v) != ec2.VolumeTypeGp3 && new == "0"
 }
 
 func resourceAwsInstanceCreate(d *schema.ResourceData, meta interface{}) error {
@@ -641,6 +678,7 @@ func resourceAwsInstanceCreate(d *schema.ResourceData, meta interface{}) error {
 		CpuOptions:                        instanceOpts.CpuOptions,
 		HibernationOptions:                instanceOpts.HibernationOptions,
 		MetadataOptions:                   instanceOpts.MetadataOptions,
+		EnclaveOptions:                    instanceOpts.EnclaveOptions,
 		TagSpecifications:                 tagSpecifications,
 	}
 
@@ -669,7 +707,10 @@ func resourceAwsInstanceCreate(d *schema.ResourceData, meta interface{}) error {
 			log.Print("[DEBUG] IAM Instance Profile appears to have no IAM roles, retrying...")
 			return resource.RetryableError(err)
 		}
-		return resource.NonRetryableError(err)
+		if err != nil {
+			return resource.NonRetryableError(err)
+		}
+		return nil
 	})
 	if isResourceTimeoutError(err) {
 		runResp, err = conn.RunInstances(runOpts)
@@ -793,6 +834,10 @@ func resourceAwsInstanceRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error setting metadata_options: %s", err)
 	}
 
+	if err := d.Set("enclave_options", flattenEc2EnclaveOptions(instance.EnclaveOptions)); err != nil {
+		return fmt.Errorf("error setting enclave_options: %s", err)
+	}
+
 	d.Set("ami", instance.ImageId)
 	d.Set("instance_type", instance.InstanceType)
 	d.Set("key_name", instance.KeyName)
@@ -816,6 +861,7 @@ func resourceAwsInstanceRead(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
+	var secondaryPrivateIPs []string
 	var ipv6Addresses []string
 	if len(instance.NetworkInterfaces) > 0 {
 		var primaryNetworkInterface ec2.InstanceNetworkInterface
@@ -860,6 +906,12 @@ func resourceAwsInstanceRead(d *schema.ResourceData, meta interface{}) error {
 
 		d.Set("associate_public_ip_address", primaryNetworkInterface.Association != nil)
 
+		for _, address := range primaryNetworkInterface.PrivateIpAddresses {
+			if !aws.BoolValue(address.Primary) {
+				secondaryPrivateIPs = append(secondaryPrivateIPs, aws.StringValue(address.PrivateIpAddress))
+			}
+		}
+
 		for _, address := range primaryNetworkInterface.Ipv6Addresses {
 			ipv6Addresses = append(ipv6Addresses, aws.StringValue(address.Ipv6Address))
 		}
@@ -869,6 +921,10 @@ func resourceAwsInstanceRead(d *schema.ResourceData, meta interface{}) error {
 		d.Set("ipv6_address_count", 0)
 		d.Set("primary_network_interface_id", "")
 		d.Set("subnet_id", instance.SubnetId)
+	}
+
+	if err := d.Set("secondary_private_ips", secondaryPrivateIPs); err != nil {
+		return fmt.Errorf("Error setting private_ips for AWS Instance (%s): %w", d.Id(), err)
 	}
 
 	if err := d.Set("ipv6_addresses", ipv6Addresses); err != nil {
@@ -949,12 +1005,12 @@ func resourceAwsInstanceRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// AWS Standard will return InstanceCreditSpecification.NotSupported errors for EC2 Instance IDs outside T2 and T3 instance types
-	// Reference: https://github.com/terraform-providers/terraform-provider-aws/issues/8055
+	// Reference: https://github.com/hashicorp/terraform-provider-aws/issues/8055
 	if strings.HasPrefix(aws.StringValue(instance.InstanceType), "t2") || strings.HasPrefix(aws.StringValue(instance.InstanceType), "t3") {
 		creditSpecifications, err := getCreditSpecifications(conn, d.Id())
 
 		// Ignore UnsupportedOperation errors for AWS China and GovCloud (US)
-		// Reference: https://github.com/terraform-providers/terraform-provider-aws/pull/4362
+		// Reference: https://github.com/hashicorp/terraform-provider-aws/pull/4362
 		if err != nil && !isAWSErr(err, "UnsupportedOperation", "") {
 			return fmt.Errorf("error getting EC2 Instance (%s) Credit Specifications: %s", d.Id(), err)
 		}
@@ -1113,23 +1169,7 @@ func resourceAwsInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	if d.HasChange("vpc_security_group_ids") && !d.IsNewResource() {
-		var groups []*string
-		if v := d.Get("vpc_security_group_ids").(*schema.Set); v.Len() > 0 {
-			for _, v := range v.List() {
-				groups = append(groups, aws.String(v.(string)))
-			}
-		}
-
-		if len(groups) < 1 {
-			return fmt.Errorf("VPC-based instances require at least one security group to be attached.")
-		}
-		// If a user has multiple network interface attachments on the target EC2 instance, simply modifying the
-		// instance attributes via a `ModifyInstanceAttributes()` request would fail with the following error message:
-		// "There are multiple interfaces attached to instance 'i-XX'. Please specify an interface ID for the operation instead."
-		// Thus, we need to actually modify the primary network interface for the new security groups, as the primary
-		// network interface is where we modify/create security group assignments during Create.
-		log.Printf("[INFO] Modifying `vpc_security_group_ids` on Instance %q", d.Id())
+	if d.HasChanges("secondary_private_ips", "vpc_security_group_ids") && !d.IsNewResource() {
 		instance, err := resourceAwsInstanceFindByID(conn, d.Id())
 		if err != nil {
 			return fmt.Errorf("error retrieving instance %q: %w", d.Id(), err)
@@ -1141,18 +1181,78 @@ func resourceAwsInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
 			}
 		}
 
-		if primaryInterface.NetworkInterfaceId == nil {
-			log.Print("[Error] Attempted to set vpc_security_group_ids on an instance without a primary network interface")
-			return fmt.Errorf(
-				"Failed to update vpc_security_group_ids on %q, which does not contain a primary network interface",
-				d.Id())
+		if d.HasChange("secondary_private_ips") {
+			if primaryInterface.NetworkInterfaceId == nil {
+				return fmt.Errorf("Failed to update secondary_private_ips on %q, which does not contain a primary network interface",
+					d.Id())
+			}
+			o, n := d.GetChange("secondary_private_ips")
+			if o == nil {
+				o = new(schema.Set)
+			}
+			if n == nil {
+				n = new(schema.Set)
+			}
+
+			os := o.(*schema.Set)
+			ns := n.(*schema.Set)
+
+			// Unassign old IP addresses
+			unassignIps := os.Difference(ns)
+			if unassignIps.Len() != 0 {
+				input := &ec2.UnassignPrivateIpAddressesInput{
+					NetworkInterfaceId: primaryInterface.NetworkInterfaceId,
+					PrivateIpAddresses: expandStringSet(unassignIps),
+				}
+				log.Printf("[INFO] Unassigning secondary_private_ips on Instance %q", d.Id())
+				_, err := conn.UnassignPrivateIpAddresses(input)
+				if err != nil {
+					return fmt.Errorf("Failure to unassign Secondary Private IPs: %w", err)
+				}
+			}
+
+			// Assign new IP addresses
+			assignIps := ns.Difference(os)
+			if assignIps.Len() != 0 {
+				input := &ec2.AssignPrivateIpAddressesInput{
+					NetworkInterfaceId: primaryInterface.NetworkInterfaceId,
+					PrivateIpAddresses: expandStringSet(assignIps),
+				}
+				log.Printf("[INFO] Assigning secondary_private_ips on Instance %q", d.Id())
+				_, err := conn.AssignPrivateIpAddresses(input)
+				if err != nil {
+					return fmt.Errorf("Failure to assign Secondary Private IPs: %w", err)
+				}
+			}
 		}
 
-		if _, err := conn.ModifyNetworkInterfaceAttribute(&ec2.ModifyNetworkInterfaceAttributeInput{
-			NetworkInterfaceId: primaryInterface.NetworkInterfaceId,
-			Groups:             groups,
-		}); err != nil {
-			return err
+		if d.HasChange("vpc_security_group_ids") {
+			if primaryInterface.NetworkInterfaceId == nil {
+				return fmt.Errorf("Failed to update vpc_security_group_ids on %q, which does not contain a primary network interface",
+					d.Id())
+			}
+			var groups []*string
+			if v := d.Get("vpc_security_group_ids").(*schema.Set); v.Len() > 0 {
+				for _, v := range v.List() {
+					groups = append(groups, aws.String(v.(string)))
+				}
+			}
+
+			if len(groups) < 1 {
+				return fmt.Errorf("VPC-based instances require at least one security group to be attached.")
+			}
+			// If a user has multiple network interface attachments on the target EC2 instance, simply modifying the
+			// instance attributes via a `ModifyInstanceAttributes()` request would fail with the following error message:
+			// "There are multiple interfaces attached to instance 'i-XX'. Please specify an interface ID for the operation instead."
+			// Thus, we need to actually modify the primary network interface for the new security groups, as the primary
+			// network interface is where we modify/create security group assignments during Create.
+			log.Printf("[INFO] Modifying `vpc_security_group_ids` on Instance %q", d.Id())
+			if _, err := conn.ModifyNetworkInterfaceAttribute(&ec2.ModifyNetworkInterfaceAttributeInput{
+				NetworkInterfaceId: primaryInterface.NetworkInterfaceId,
+				Groups:             groups,
+			}); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -1181,11 +1281,32 @@ func resourceAwsInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 
 		log.Printf("[INFO] Starting Instance %q after instance_type change", d.Id())
-		_, err = conn.StartInstances(&ec2.StartInstancesInput{
+
+		input := &ec2.StartInstancesInput{
 			InstanceIds: []*string{aws.String(d.Id())},
+		}
+
+		// Reference: https://github.com/hashicorp/terraform-provider-aws/issues/16433
+		err = resource.Retry(waiter.InstanceAttributePropagationTimeout, func() *resource.RetryError {
+			_, err := conn.StartInstances(input)
+
+			if tfawserr.ErrMessageContains(err, tfec2.ErrCodeInvalidParameterValue, "LaunchPlan instance type does not match attribute value") {
+				return resource.RetryableError(err)
+			}
+
+			if err != nil {
+				return resource.NonRetryableError(err)
+			}
+
+			return nil
 		})
+
+		if tfresource.TimedOut(err) {
+			_, err = conn.StartInstances(input)
+		}
+
 		if err != nil {
-			return fmt.Errorf("error starting instance (%s): %s", d.Id(), err)
+			return fmt.Errorf("error starting EC2 Instance (%s): %w", d.Id(), err)
 		}
 
 		stateConf := &resource.StateChangeConf{
@@ -1283,6 +1404,22 @@ func resourceAwsInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
 				if err != nil {
 					return fmt.Errorf("Error updating metadata options: %s", err)
 				}
+
+				stateConf := &resource.StateChangeConf{
+					Pending:    []string{ec2.InstanceMetadataOptionsStatePending},
+					Target:     []string{ec2.InstanceMetadataOptionsStateApplied},
+					Refresh:    MetadataOptionsRefreshFunc(conn, d.Id()),
+					Timeout:    d.Timeout(schema.TimeoutUpdate),
+					Delay:      10 * time.Second,
+					MinTimeout: 3 * time.Second,
+				}
+
+				_, err = stateConf.WaitForState()
+				if err != nil {
+					return fmt.Errorf(
+						"Error waiting for instance (%s) to apply metadata options update: %s",
+						d.Id(), err)
+				}
 			}
 		}
 	}
@@ -1309,8 +1446,27 @@ func resourceAwsInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 		if d.HasChange("root_block_device.0.iops") {
 			if v, ok := d.Get("root_block_device.0.iops").(int); ok && v != 0 {
+				// Enforce IOPs usage with a valid volume type
+				// Reference: https://github.com/hashicorp/terraform-provider-aws/issues/12667
+				if t, ok := d.Get("root_block_device.0.volume_type").(string); ok && t != ec2.VolumeTypeIo1 && t != ec2.VolumeTypeIo2 && t != ec2.VolumeTypeGp3 {
+					if t == "" {
+						// Volume defaults to gp2
+						t = ec2.VolumeTypeGp2
+					}
+					return fmt.Errorf("error updating instance: iops attribute not supported for type %s", t)
+				}
 				modifyVolume = true
 				input.Iops = aws.Int64(int64(v))
+			}
+		}
+		if d.HasChange("root_block_device.0.throughput") {
+			if v, ok := d.Get("root_block_device.0.throughput").(int); ok && v != 0 {
+				// Enforce throughput usage with a valid volume type
+				if t, ok := d.Get("root_block_device.0.volume_type").(string); ok && t != ec2.VolumeTypeGp3 {
+					return fmt.Errorf("error updating instance: throughput attribute not supported for type %s", t)
+				}
+				modifyVolume = true
+				input.Throughput = aws.Int64(int64(v))
 			}
 		}
 		if modifyVolume {
@@ -1353,6 +1509,20 @@ func resourceAwsInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
 				})
 				if err != nil {
 					return fmt.Errorf("error modifying delete on termination attribute for EC2 instance %q block device %q: %w", d.Id(), deviceName, err)
+				}
+
+				stateConf := &resource.StateChangeConf{
+					Target:     []string{strconv.FormatBool(v)},
+					Refresh:    RootBlockDeviceDeleteOnTerminationRefreshFunc(conn, d.Id()),
+					Timeout:    d.Timeout(schema.TimeoutUpdate),
+					Delay:      10 * time.Second,
+					MinTimeout: 3 * time.Second,
+				}
+
+				_, err = stateConf.WaitForState()
+				if err != nil {
+					return fmt.Errorf("Error waiting for instance (%s) to apply DeleteOnTermination attribute update: %s",
+						d.Id(), err)
 				}
 			}
 		}
@@ -1404,6 +1574,60 @@ func InstanceStateRefreshFunc(conn *ec2.EC2, instanceID string, failStates []str
 		}
 
 		return instance, state, nil
+	}
+}
+
+// MetadataOptionsRefreshFunc returns a resource.StateRefreshFunc that is used to watch
+// changes in an EC2 instance's metadata options.
+func MetadataOptionsRefreshFunc(conn *ec2.EC2, instanceID string) resource.StateRefreshFunc {
+	return func() (interface{}, string, error) {
+		instance, err := resourceAwsInstanceFindByID(conn, instanceID)
+		if err != nil {
+			if !isAWSErr(err, "InvalidInstanceID.NotFound", "") {
+				log.Printf("Error on InstanceStateRefresh: %s", err)
+				return nil, "", err
+			}
+		}
+
+		if instance == nil || instance.MetadataOptions == nil {
+			// Sometimes AWS just has consistency issues and doesn't see
+			// our instance yet. Return an empty state.
+			return nil, "", nil
+		}
+
+		state := aws.StringValue(instance.MetadataOptions.State)
+
+		return instance, state, nil
+	}
+}
+
+// RootBlockDeviceDeleteOnTerminationRefreshFunc returns a resource.StateRefreshFunc
+// that is used to watch changes in an EC2 instance's root block device's delete on termination attribute.
+func RootBlockDeviceDeleteOnTerminationRefreshFunc(conn *ec2.EC2, instanceID string) resource.StateRefreshFunc {
+	return func() (interface{}, string, error) {
+		instance, err := resourceAwsInstanceFindByID(conn, instanceID)
+		if err != nil {
+			if !isAWSErr(err, "InvalidInstanceID.NotFound", "") {
+				log.Printf("Error on InstanceStateRefresh: %s", err)
+				return nil, "", err
+			}
+		}
+
+		if instance == nil || len(instance.BlockDeviceMappings) == 0 {
+			// Sometimes AWS just has consistency issues and doesn't see
+			// our instance yet. Return an empty state.
+			return nil, "", nil
+		}
+
+		var deleteOnTermination string
+		for _, bd := range instance.BlockDeviceMappings {
+			if blockDeviceIsRoot(bd, instance) {
+				deleteOnTermination = strconv.FormatBool(aws.BoolValue(bd.Ebs.DeleteOnTermination))
+				break
+			}
+		}
+
+		return instance, deleteOnTermination, nil
 	}
 }
 
@@ -1583,6 +1807,9 @@ func readBlockDevicesFromInstance(instance *ec2.Instance, conn *ec2.EC2) (map[st
 		if vol.KmsKeyId != nil {
 			bd["kms_key_id"] = aws.StringValue(vol.KmsKeyId)
 		}
+		if vol.Throughput != nil {
+			bd["throughput"] = aws.Int64Value(vol.Throughput)
+		}
 		if instanceBd.DeviceName != nil {
 			bd["device_name"] = aws.StringValue(instanceBd.DeviceName)
 		}
@@ -1700,6 +1927,10 @@ func buildNetworkInterfaceOpts(d *schema.ResourceData, groups []*string, nInterf
 			ni.PrivateIpAddress = aws.String(v.(string))
 		}
 
+		if v, ok := d.GetOk("secondary_private_ips"); ok && v.(*schema.Set).Len() > 0 {
+			ni.PrivateIpAddresses = expandSecondaryPrivateIPAddresses(v.(*schema.Set).List())
+		}
+
 		if v, ok := d.GetOk("ipv6_address_count"); ok {
 			ni.Ipv6AddressCount = aws.Int64(int64(v.(int)))
 		}
@@ -1770,13 +2001,24 @@ func readBlockDeviceMappingsFromConfig(d *schema.ResourceData, conn *ec2.EC2) ([
 
 			if v, ok := bd["volume_type"].(string); ok && v != "" {
 				ebs.VolumeType = aws.String(v)
-				if ec2.VolumeTypeIo1 == strings.ToLower(v) {
-					// Condition: This parameter is required for requests to create io1
-					// volumes; it is not used in requests to create gp2, st1, sc1, or
-					// standard volumes.
-					// See: http://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_EbsBlockDevice.html
-					if v, ok := bd["iops"].(int); ok && v > 0 {
-						ebs.Iops = aws.Int64(int64(v))
+				if iops, ok := bd["iops"].(int); ok && iops > 0 {
+					if ec2.VolumeTypeIo1 == strings.ToLower(v) || ec2.VolumeTypeIo2 == strings.ToLower(v) || ec2.VolumeTypeGp3 == strings.ToLower(v) {
+						// Condition: This parameter is required for requests to create io1 or io2
+						// volumes and optional for gp3; it is not used in requests to create gp2, st1, sc1, or
+						// standard volumes.
+						// See: http://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_EbsBlockDevice.html
+						ebs.Iops = aws.Int64(int64(iops))
+					} else {
+						// Enforce IOPs usage with a valid volume type
+						// Reference: https://github.com/hashicorp/terraform-provider-aws/issues/12667
+						return nil, fmt.Errorf("error creating resource: iops attribute not supported for ebs_block_device with volume_type %s", v)
+					}
+				} else if throughput, ok := bd["throughput"].(int); ok && throughput > 0 {
+					// `throughput` is only valid for gp3
+					if ec2.VolumeTypeGp3 == strings.ToLower(v) {
+						ebs.Throughput = aws.Int64(int64(throughput))
+					} else {
+						return nil, fmt.Errorf("error creating resource: throughput attribute not supported for ebs_block_device with volume_type %s", v)
 					}
 				}
 			}
@@ -1832,18 +2074,28 @@ func readBlockDeviceMappingsFromConfig(d *schema.ResourceData, conn *ec2.EC2) ([
 
 			if v, ok := bd["volume_type"].(string); ok && v != "" {
 				ebs.VolumeType = aws.String(v)
-			}
-
-			if v, ok := bd["iops"].(int); ok && v > 0 && aws.StringValue(ebs.VolumeType) == ec2.VolumeTypeIo1 {
-				// Only set the iops attribute if the volume type is io1. Setting otherwise
-				// can trigger a refresh/plan loop based on the computed value that is given
-				// from AWS, and prevent us from specifying 0 as a valid iops.
-				//   See https://github.com/hashicorp/terraform/pull/4146
-				//   See https://github.com/hashicorp/terraform/issues/7765
-				ebs.Iops = aws.Int64(int64(v))
-			} else if v, ok := bd["iops"].(int); ok && v > 0 && aws.StringValue(ebs.VolumeType) != ec2.VolumeTypeIo1 {
-				// Message user about incompatibility
-				log.Print("[WARN] IOPs is only valid on IO1 storage type for EBS Volumes")
+				if iops, ok := bd["iops"].(int); ok && iops > 0 {
+					if ec2.VolumeTypeIo1 == strings.ToLower(v) || ec2.VolumeTypeIo2 == strings.ToLower(v) || ec2.VolumeTypeGp3 == strings.ToLower(v) {
+						// Only set the iops attribute if the volume type is io1, io2, or gp3. Setting otherwise
+						// can trigger a refresh/plan loop based on the computed value that is given
+						// from AWS, and prevent us from specifying 0 as a valid iops.
+						//   See https://github.com/hashicorp/terraform/pull/4146
+						//   See https://github.com/hashicorp/terraform/issues/7765
+						ebs.Iops = aws.Int64(int64(iops))
+					} else {
+						// Enforce IOPs usage with a valid volume type
+						// Reference: https://github.com/hashicorp/terraform-provider-aws/issues/12667
+						return nil, fmt.Errorf("error creating resource: iops attribute not supported for root_block_device with volume_type %s", v)
+					}
+				} else if throughput, ok := bd["throughput"].(int); ok && throughput > 0 {
+					// throughput is only valid for gp3
+					if ec2.VolumeTypeGp3 == strings.ToLower(v) {
+						ebs.Throughput = aws.Int64(int64(throughput))
+					} else {
+						// Enforce throughput usage with a valid volume type
+						return nil, fmt.Errorf("error creating resource: throughput attribute not supported for root_block_device with volume_type %s", v)
+					}
+				}
 			}
 
 			if dn, err := fetchRootDeviceName(d.Get("ami").(string), conn); err == nil {
@@ -2009,10 +2261,10 @@ type awsInstanceOpts struct {
 	CpuOptions                        *ec2.CpuOptionsRequest
 	HibernationOptions                *ec2.HibernationOptionsRequest
 	MetadataOptions                   *ec2.InstanceMetadataOptionsRequest
+	EnclaveOptions                    *ec2.EnclaveOptionsRequest
 }
 
-func buildAwsInstanceOpts(
-	d *schema.ResourceData, meta interface{}) (*awsInstanceOpts, error) {
+func buildAwsInstanceOpts(d *schema.ResourceData, meta interface{}) (*awsInstanceOpts, error) {
 	conn := meta.(*AWSClient).ec2conn
 
 	instanceType := d.Get("instance_type").(string)
@@ -2022,6 +2274,7 @@ func buildAwsInstanceOpts(
 		ImageID:               aws.String(d.Get("ami").(string)),
 		InstanceType:          aws.String(instanceType),
 		MetadataOptions:       expandEc2InstanceMetadataOptions(d.Get("metadata_options").([]interface{})),
+		EnclaveOptions:        expandEc2EnclaveOptions(d.Get("enclave_options").([]interface{})),
 	}
 
 	// Set default cpu_credits as Unlimited for T3 instance type
@@ -2335,6 +2588,33 @@ func expandEc2InstanceMetadataOptions(l []interface{}) *ec2.InstanceMetadataOpti
 	return opts
 }
 
+func expandEc2EnclaveOptions(l []interface{}) *ec2.EnclaveOptionsRequest {
+	if len(l) == 0 || l[0] == nil {
+		return nil
+	}
+
+	m := l[0].(map[string]interface{})
+
+	opts := &ec2.EnclaveOptionsRequest{
+		Enabled: aws.Bool(m["enabled"].(bool)),
+	}
+
+	return opts
+}
+
+//Expands an array of secondary Private IPs into a ec2 Private IP Address Spec
+func expandSecondaryPrivateIPAddresses(ips []interface{}) []*ec2.PrivateIpAddressSpecification {
+	specs := make([]*ec2.PrivateIpAddressSpecification, 0, len(ips))
+	for _, v := range ips {
+		spec := &ec2.PrivateIpAddressSpecification{
+			PrivateIpAddress: aws.String(v.(string)),
+		}
+
+		specs = append(specs, spec)
+	}
+	return specs
+}
+
 func flattenEc2InstanceMetadataOptions(opts *ec2.InstanceMetadataOptionsResponse) []interface{} {
 	if opts == nil {
 		return nil
@@ -2344,6 +2624,18 @@ func flattenEc2InstanceMetadataOptions(opts *ec2.InstanceMetadataOptionsResponse
 		"http_endpoint":               aws.StringValue(opts.HttpEndpoint),
 		"http_put_response_hop_limit": aws.Int64Value(opts.HttpPutResponseHopLimit),
 		"http_tokens":                 aws.StringValue(opts.HttpTokens),
+	}
+
+	return []interface{}{m}
+}
+
+func flattenEc2EnclaveOptions(opts *ec2.EnclaveOptions) []interface{} {
+	if opts == nil {
+		return nil
+	}
+
+	m := map[string]interface{}{
+		"enabled": aws.BoolValue(opts.Enabled),
 	}
 
 	return []interface{}{m}

@@ -14,10 +14,9 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudfront"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/hashcode"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/terraform-providers/terraform-provider-aws/aws/internal/flatmap"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/terraform-providers/terraform-provider-aws/aws/internal/hashcode"
 )
 
 // cloudFrontRoute53ZoneID defines the route 53 zone ID for CloudFront. This
@@ -515,7 +514,7 @@ func expandAllowedMethods(s *schema.Set) *cloudfront.AllowedMethods {
 
 func flattenAllowedMethods(am *cloudfront.AllowedMethods) *schema.Set {
 	if am.Items != nil {
-		return schema.NewSet(schema.HashString, flattenStringList(am.Items))
+		return flattenStringSet(am.Items)
 	}
 	return nil
 }
@@ -529,7 +528,7 @@ func expandCachedMethods(s *schema.Set) *cloudfront.CachedMethods {
 
 func flattenCachedMethods(cm *cloudfront.CachedMethods) *schema.Set {
 	if cm.Items != nil {
-		return schema.NewSet(schema.HashString, flattenStringList(cm.Items))
+		return flattenStringSet(cm.Items)
 	}
 	return nil
 }
@@ -878,7 +877,7 @@ func expandCustomOriginConfigSSL(s []interface{}) *cloudfront.OriginSslProtocols
 }
 
 func flattenCustomOriginConfigSSL(osp *cloudfront.OriginSslProtocols) *schema.Set {
-	return schema.NewSet(schema.HashString, flattenStringList(osp.Items))
+	return flattenStringSet(osp.Items)
 }
 
 func expandS3OriginConfig(m map[string]interface{}) *cloudfront.S3OriginConfig {
@@ -1015,7 +1014,7 @@ func expandAliases(as *schema.Set) *cloudfront.Aliases {
 
 func flattenAliases(aliases *cloudfront.Aliases) *schema.Set {
 	if aliases.Items != nil {
-		return schema.NewSet(aliasesHash, flattenStringList(aliases.Items))
+		return flattenStringSet(aliases.Items)
 	}
 	return schema.NewSet(aliasesHash, []interface{}{})
 }
@@ -1059,7 +1058,7 @@ func flattenGeoRestriction(gr *cloudfront.GeoRestriction) map[string]interface{}
 
 	m["restriction_type"] = aws.StringValue(gr.RestrictionType)
 	if gr.Items != nil {
-		m["locations"] = schema.NewSet(schema.HashString, flattenStringList(gr.Items))
+		m["locations"] = flattenStringSet(gr.Items)
 	}
 	return m
 }
@@ -1101,20 +1100,30 @@ func flattenViewerCertificate(vc *cloudfront.ViewerCertificate) []interface{} {
 	return []interface{}{m}
 }
 
-// Convert *cloudfront.ActiveTrustedSigners to a flatmap.Map type, which ensures
-// it can probably be inserted into the schema.TypeMap type used by the
-// active_trusted_signers attribute.
-func flattenActiveTrustedSigners(ats *cloudfront.ActiveTrustedSigners) flatmap.Map {
-	m := make(map[string]interface{})
-	s := []interface{}{}
-	m["enabled"] = *ats.Enabled
-
-	for _, v := range ats.Items {
-		signer := make(map[string]interface{})
-		signer["aws_account_number"] = *v.AwsAccountNumber
-		signer["key_pair_ids"] = aws.StringValueSlice(v.KeyPairIds.Items)
-		s = append(s, signer)
+func flattenCloudfrontActiveTrustedSigners(ats *cloudfront.ActiveTrustedSigners) []interface{} {
+	if ats == nil {
+		return []interface{}{}
 	}
-	m["items"] = s
-	return flatmap.Flatten(m)
+
+	m := map[string]interface{}{
+		"enabled": aws.BoolValue(ats.Enabled),
+		"items":   flattenCloudfrontSigners(ats.Items),
+	}
+
+	return []interface{}{m}
+}
+
+func flattenCloudfrontSigners(signers []*cloudfront.Signer) []interface{} {
+	result := make([]interface{}, 0, len(signers))
+
+	for _, signer := range signers {
+		m := map[string]interface{}{
+			"aws_account_number": aws.StringValue(signer.AwsAccountNumber),
+			"key_pair_ids":       aws.StringValueSlice(signer.KeyPairIds.Items),
+		}
+
+		result = append(result, m)
+	}
+
+	return result
 }

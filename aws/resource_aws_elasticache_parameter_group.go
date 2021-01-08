@@ -7,13 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/hashcode"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/elasticache"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/terraform-providers/terraform-provider-aws/aws/internal/hashcode"
 )
 
 func resourceAwsElasticacheParameterGroup() *schema.Resource {
@@ -81,7 +80,7 @@ func resourceAwsElasticacheParameterGroupCreate(d *schema.ResourceData, meta int
 		return fmt.Errorf("Error creating Cache Parameter Group: %s", err)
 	}
 
-	d.SetId(*resp.CacheParameterGroup.CacheParameterGroupName)
+	d.SetId(aws.StringValue(resp.CacheParameterGroup.CacheParameterGroupName))
 	log.Printf("[INFO] Cache Parameter Group ID: %s", d.Id())
 
 	return resourceAwsElasticacheParameterGroupUpdate(d, meta)

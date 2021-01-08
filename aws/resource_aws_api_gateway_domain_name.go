@@ -7,10 +7,9 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/apigateway"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/terraform-providers/terraform-provider-aws/aws/internal/keyvaluetags"
 )
 
@@ -180,15 +179,15 @@ func resourceAwsApiGatewayDomainNameCreate(d *schema.ResourceData, meta interfac
 		params.EndpointConfiguration = expandApiGatewayEndpointConfiguration(v.([]interface{}))
 	}
 
-	if v, ok := d.GetOk("regional_certificate_arn"); ok && v.(string) != "" {
+	if v, ok := d.GetOk("regional_certificate_arn"); ok {
 		params.RegionalCertificateArn = aws.String(v.(string))
 	}
 
-	if v, ok := d.GetOk("regional_certificate_name"); ok && v.(string) != "" {
+	if v, ok := d.GetOk("regional_certificate_name"); ok {
 		params.RegionalCertificateName = aws.String(v.(string))
 	}
 
-	if v, ok := d.GetOk("security_policy"); ok && v.(string) != "" {
+	if v, ok := d.GetOk("security_policy"); ok {
 		params.SecurityPolicy = aws.String(v.(string))
 	}
 
@@ -201,7 +200,7 @@ func resourceAwsApiGatewayDomainNameCreate(d *schema.ResourceData, meta interfac
 		return fmt.Errorf("Error creating API Gateway Domain Name: %s", err)
 	}
 
-	d.SetId(*domainName.DomainName)
+	d.SetId(aws.StringValue(domainName.DomainName))
 
 	return resourceAwsApiGatewayDomainNameRead(d, meta)
 }
@@ -216,7 +215,7 @@ func resourceAwsApiGatewayDomainNameRead(d *schema.ResourceData, meta interface{
 		DomainName: aws.String(d.Id()),
 	})
 	if err != nil {
-		if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == apigateway.ErrCodeNotFoundException {
+		if isAWSErr(err, apigateway.ErrCodeNotFoundException, "") {
 			log.Printf("[WARN] API Gateway Domain Name (%s) not found, removing from state", d.Id())
 			d.SetId("")
 			return nil
@@ -263,7 +262,7 @@ func resourceAwsApiGatewayDomainNameUpdateOperations(d *schema.ResourceData) []*
 
 	if d.HasChange("certificate_name") {
 		operations = append(operations, &apigateway.PatchOperation{
-			Op:    aws.String("replace"),
+			Op:    aws.String(apigateway.OpReplace),
 			Path:  aws.String("/certificateName"),
 			Value: aws.String(d.Get("certificate_name").(string)),
 		})
@@ -271,7 +270,7 @@ func resourceAwsApiGatewayDomainNameUpdateOperations(d *schema.ResourceData) []*
 
 	if d.HasChange("certificate_arn") {
 		operations = append(operations, &apigateway.PatchOperation{
-			Op:    aws.String("replace"),
+			Op:    aws.String(apigateway.OpReplace),
 			Path:  aws.String("/certificateArn"),
 			Value: aws.String(d.Get("certificate_arn").(string)),
 		})
@@ -279,7 +278,7 @@ func resourceAwsApiGatewayDomainNameUpdateOperations(d *schema.ResourceData) []*
 
 	if d.HasChange("regional_certificate_name") {
 		operations = append(operations, &apigateway.PatchOperation{
-			Op:    aws.String("replace"),
+			Op:    aws.String(apigateway.OpReplace),
 			Path:  aws.String("/regionalCertificateName"),
 			Value: aws.String(d.Get("regional_certificate_name").(string)),
 		})
@@ -287,7 +286,7 @@ func resourceAwsApiGatewayDomainNameUpdateOperations(d *schema.ResourceData) []*
 
 	if d.HasChange("regional_certificate_arn") {
 		operations = append(operations, &apigateway.PatchOperation{
-			Op:    aws.String("replace"),
+			Op:    aws.String(apigateway.OpReplace),
 			Path:  aws.String("/regionalCertificateArn"),
 			Value: aws.String(d.Get("regional_certificate_arn").(string)),
 		})
@@ -295,7 +294,7 @@ func resourceAwsApiGatewayDomainNameUpdateOperations(d *schema.ResourceData) []*
 
 	if d.HasChange("security_policy") {
 		operations = append(operations, &apigateway.PatchOperation{
-			Op:    aws.String("replace"),
+			Op:    aws.String(apigateway.OpReplace),
 			Path:  aws.String("/securityPolicy"),
 			Value: aws.String(d.Get("security_policy").(string)),
 		})
@@ -308,7 +307,7 @@ func resourceAwsApiGatewayDomainNameUpdateOperations(d *schema.ResourceData) []*
 			m := v.([]interface{})[0].(map[string]interface{})
 
 			operations = append(operations, &apigateway.PatchOperation{
-				Op:    aws.String("replace"),
+				Op:    aws.String(apigateway.OpReplace),
 				Path:  aws.String("/endpointConfiguration/types/0"),
 				Value: aws.String(m["types"].([]interface{})[0].(string)),
 			})
@@ -349,7 +348,7 @@ func resourceAwsApiGatewayDomainNameDelete(d *schema.ResourceData, meta interfac
 		DomainName: aws.String(d.Id()),
 	})
 
-	if isAWSErr(err, "NotFoundException", "") {
+	if isAWSErr(err, apigateway.ErrCodeNotFoundException, "") {
 		return nil
 	}
 
