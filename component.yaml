@@ -1,4 +1,4 @@
-name: terraform-provider-aws
+name: terraform-provider-aws-next
 kind: go-library
 exports:
   source:
