@@ -209,6 +209,7 @@ func resourceAwsLightsailInstanceRead(d *schema.ResourceData, meta interface{}) 
 	d.Set("created_at", i.CreatedAt.Format(time.RFC3339))
 	d.Set("cpu_count", i.Hardware.CpuCount)
 	d.Set("ram_size", i.Hardware.RamSizeInGb)
+	// Fugue: Removing for now due to SDK compatibility issues
 	//d.Set("ipv6_address", i.Ipv6Address)
 	d.Set("is_static_ip", i.IsStaticIp)
 	d.Set("private_ip_address", i.PrivateIpAddress)

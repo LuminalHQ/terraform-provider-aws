@@ -92,8 +92,9 @@ func resourceAwsAccountAlternateContactRead(d *schema.ResourceData, meta interfa
 		return err
 	}
 
+	// AccountID is replaced by empty string because it must be a member account in the org if used
+	// See https://docs.aws.amazon.com/accounts/latest/reference/API_GetAlternateContact.html#API_GetAlternateContact_RequestSyntax
 	output, err := FindAlternateContactByAccountIDAndContactType(conn, "", contactType)
-	//output, err := FindAlternateContactByAccountIDAndContactType(conn, accountID, contactType)
 
 	if err != nil {
 		return err
@@ -110,11 +111,11 @@ func resourceAwsAccountAlternateContactRead(d *schema.ResourceData, meta interfa
 }
 
 func resourceAwsAccountAlternateContactUpdate(d *schema.ResourceData, meta interface{}) error {
-	return nil
+	return errors.New("unimplemented)")
 }
 
 func resourceAwsAccountAlternateContactDelete(d *schema.ResourceData, meta interface{}) error {
-	return nil
+	return errors.New("unimplemented)")
 }
 
 func FindAlternateContactByAccountIDAndContactType(conn *account.Account, accountID, contactType string) (*account.AlternateContact, error) {
