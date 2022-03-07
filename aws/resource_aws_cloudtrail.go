@@ -3,6 +3,7 @@ package aws
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -442,7 +443,9 @@ func resourceAwsCloudTrailRead(d *schema.ResourceData, meta interface{}) error {
 	})
 	if err != nil {
 		if !isAWSErr(err, cloudtrail.ErrCodeInsightNotEnabledException, "") {
-			return fmt.Errorf("error getting Cloud Trail (%s) Insight Selectors: %w", d.Id(), err)
+			if !strings.Contains(err.Error(), "AccessDeniedException") {
+				return fmt.Errorf("error getting Cloud Trail (%s) Insight Selectors: %w", d.Id(), err)
+			}
 		}
 	}
 	if insightSelectors != nil {
