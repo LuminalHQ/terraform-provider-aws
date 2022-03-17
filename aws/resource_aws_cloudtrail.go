@@ -93,7 +93,15 @@ func resourceAwsCloudTrail() *schema.Resource {
 			"insight_selector": {
 				Type:     schema.TypeList,
 				Optional: true,
-			},
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"insight_type": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},		
 			"is_multi_region_trail": {
 				Type:     schema.TypeBool,
 				Optional: true,
