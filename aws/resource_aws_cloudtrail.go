@@ -694,6 +694,7 @@ func expandAwsCloudTrailEventSelectorDataResource(configured []interface{}) []*c
 func flattenAwsCloudTrailEventSelector(configured []*cloudtrail.EventSelector) []map[string]interface{} {
 	eventSelectors := make([]map[string]interface{}, 0, len(configured))
 
+	// We want to output all the selectors (note for advanced event selectors this is empty)
 	// Prevent default configurations shows differences
 	// if len(configured) == 1 && len(configured[0].DataResources) == 0 && aws.StringValue(configured[0].ReadWriteType) == "All" {
 	// 	return eventSelectors
