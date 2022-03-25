@@ -101,7 +101,7 @@ func resourceAwsCloudTrail() *schema.Resource {
 						},
 					},
 				},
-			},		
+			},
 			"is_multi_region_trail": {
 				Type:     schema.TypeBool,
 				Optional: true,
@@ -695,9 +695,9 @@ func flattenAwsCloudTrailEventSelector(configured []*cloudtrail.EventSelector) [
 	eventSelectors := make([]map[string]interface{}, 0, len(configured))
 
 	// Prevent default configurations shows differences
-	if len(configured) == 1 && len(configured[0].DataResources) == 0 && aws.StringValue(configured[0].ReadWriteType) == "All" {
-		return eventSelectors
-	}
+	// if len(configured) == 1 && len(configured[0].DataResources) == 0 && aws.StringValue(configured[0].ReadWriteType) == "All" {
+	// 	return eventSelectors
+	// }
 
 	for _, raw := range configured {
 		item := make(map[string]interface{})
