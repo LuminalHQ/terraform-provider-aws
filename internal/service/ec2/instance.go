@@ -13,8 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"engine/.go/pkg/mod/github.com/hashicorp/aws-sdk-go-base/v2/awsv1shim/v2@v2.0.0-beta.14/tfawserr"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -381,16 +379,10 @@ func ResourceInstance() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"http_endpoint": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Computed: true,
-							ValidateFunc: validation.StringInSlice(
-								[]string{
-									ec2.InstanceMetadataEndpointStateEnabled,
-									ec2.InstanceMetadataEndpointStateDisabled,
-								},
-								false,
-							),
+							Type:         schema.TypeString,
+							Optional:     true,
+							Computed:     true,
+							ValidateFunc: validation.StringInSlice([]string{ec2.InstanceMetadataEndpointStateEnabled, ec2.InstanceMetadataEndpointStateDisabled}, false),
 						},
 						"http_put_response_hop_limit": {
 							Type:         schema.TypeInt,
@@ -399,13 +391,10 @@ func ResourceInstance() *schema.Resource {
 							ValidateFunc: validation.IntBetween(1, 64),
 						},
 						"http_tokens": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Computed: true,
-							ValidateFunc: validation.StringInSlice(
-								[]string{ec2.HttpTokensStateOptional, ec2.HttpTokensStateRequired},
-								false,
-							),
+							Type:         schema.TypeString,
+							Optional:     true,
+							Computed:     true,
+							ValidateFunc: validation.StringInSlice([]string{ec2.HttpTokensStateOptional, ec2.HttpTokensStateRequired}, false),
 						},
 						"instance_metadata_tags": {
 							Type:         schema.TypeString,
@@ -422,20 +411,10 @@ func ResourceInstance() *schema.Resource {
 				Computed: true,
 			},
 			"network_interface": {
-				ConflictsWith: []string{
-					"associate_public_ip_address",
-					"subnet_id",
-					"private_ip",
-					"secondary_private_ips",
-					"vpc_security_group_ids",
-					"security_groups",
-					"ipv6_addresses",
-					"ipv6_address_count",
-					"source_dest_check",
-				},
-				Type:     schema.TypeSet,
-				Optional: true,
-				Computed: true,
+				ConflictsWith: []string{"associate_public_ip_address", "subnet_id", "private_ip", "secondary_private_ips", "vpc_security_group_ids", "security_groups", "ipv6_addresses", "ipv6_address_count", "source_dest_check"},
+				Type:          schema.TypeSet,
+				Optional:      true,
+				Computed:      true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"delete_on_termination": {
@@ -671,10 +650,7 @@ func ResourceInstance() *schema.Resource {
 							Type:         schema.TypeString,
 							Optional:     true,
 							ValidateFunc: validation.StringInSlice(ec2.CapacityReservationPreference_Values(), false),
-							ExactlyOneOf: []string{
-								"capacity_reservation_specification.0.capacity_reservation_preference",
-								"capacity_reservation_specification.0.capacity_reservation_target",
-							},
+							ExactlyOneOf: []string{"capacity_reservation_specification.0.capacity_reservation_preference", "capacity_reservation_specification.0.capacity_reservation_target"},
 						},
 						"capacity_reservation_target": {
 							Type:     schema.TypeList,
@@ -688,10 +664,7 @@ func ResourceInstance() *schema.Resource {
 									},
 								},
 							},
-							ExactlyOneOf: []string{
-								"capacity_reservation_specification.0.capacity_reservation_preference",
-								"capacity_reservation_specification.0.capacity_reservation_target",
-							},
+							ExactlyOneOf: []string{"capacity_reservation_specification.0.capacity_reservation_preference", "capacity_reservation_specification.0.capacity_reservation_target"},
 						},
 					},
 				},
@@ -746,32 +719,20 @@ func ResourceInstance() *schema.Resource {
 
 				return nil
 			},
-			customdiff.ComputedIf(
-				"launch_template.0.id",
-				func(_ context.Context, diff *schema.ResourceDiff, meta interface{}) bool {
-					return diff.HasChange("launch_template.0.name")
-				},
-			),
-			customdiff.ComputedIf(
-				"launch_template.0.name",
-				func(_ context.Context, diff *schema.ResourceDiff, meta interface{}) bool {
-					return diff.HasChange("launch_template.0.id")
-				},
-			),
-			customdiff.ForceNewIf(
-				"user_data",
-				func(_ context.Context, diff *schema.ResourceDiff, meta interface{}) bool {
-					replace := diff.Get("user_data_replace_on_change")
-					return replace.(bool)
-				},
-			),
-			customdiff.ForceNewIf(
-				"user_data_base64",
-				func(_ context.Context, diff *schema.ResourceDiff, meta interface{}) bool {
-					replace := diff.Get("user_data_replace_on_change")
-					return replace.(bool)
-				},
-			),
+			customdiff.ComputedIf("launch_template.0.id", func(_ context.Context, diff *schema.ResourceDiff, meta interface{}) bool {
+				return diff.HasChange("launch_template.0.name")
+			}),
+			customdiff.ComputedIf("launch_template.0.name", func(_ context.Context, diff *schema.ResourceDiff, meta interface{}) bool {
+				return diff.HasChange("launch_template.0.id")
+			}),
+			customdiff.ForceNewIf("user_data", func(_ context.Context, diff *schema.ResourceDiff, meta interface{}) bool {
+				replace := diff.Get("user_data_replace_on_change")
+				return replace.(bool)
+			}),
+			customdiff.ForceNewIf("user_data_base64", func(_ context.Context, diff *schema.ResourceDiff, meta interface{}) bool {
+				replace := diff.Get("user_data_replace_on_change")
+				return replace.(bool)
+			}),
 		),
 	}
 }
@@ -781,8 +742,7 @@ func iopsDiffSuppressFunc(k, old, new string, d *schema.ResourceData) bool {
 	i := strings.LastIndexByte(k, '.')
 	vt := k[:i+1] + "volume_type"
 	v := d.Get(vt).(string)
-	return (strings.ToLower(v) != ec2.VolumeTypeIo1 && strings.ToLower(v) != ec2.VolumeTypeIo2 && strings.ToLower(v) != ec2.VolumeTypeGp3) &&
-		new == "0"
+	return (strings.ToLower(v) != ec2.VolumeTypeIo1 && strings.ToLower(v) != ec2.VolumeTypeIo2 && strings.ToLower(v) != ec2.VolumeTypeGp3) && new == "0"
 }
 
 func throughputDiffSuppressFunc(k, old, new string, d *schema.ResourceData) bool {
@@ -804,9 +764,7 @@ func resourceInstanceCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	tagSpecifications := ec2TagSpecificationsFromKeyValueTags(tags, ec2.ResourceTypeInstance)
-	tagSpecifications = append(
-		tagSpecifications,
-		ec2TagSpecificationsFromMap(d.Get("volume_tags").(map[string]interface{}), ec2.ResourceTypeVolume)...)
+	tagSpecifications = append(tagSpecifications, ec2TagSpecificationsFromMap(d.Get("volume_tags").(map[string]interface{}), ec2.ResourceTypeVolume)...)
 
 	// Build the creation struct
 	runOpts := &ec2.RunInstancesInput{
@@ -877,11 +835,7 @@ func resourceInstanceCreate(d *schema.ResourceData, meta interface{}) error {
 	// where a user uses group ids in security_groups for the Default VPC.
 	//   See https://github.com/hashicorp/terraform/issues/3798
 	if tfawserr.ErrMessageContains(err, "InvalidParameterValue", "groupId is invalid") {
-		return fmt.Errorf(
-			"Error launching instance, possible mismatch of Security Group IDs and Names. See AWS Instance docs here: %s.\n\n\tAWS Error: %w",
-			"https://terraform.io/docs/providers/aws/r/instance.html",
-			err,
-		)
+		return fmt.Errorf("Error launching instance, possible mismatch of Security Group IDs and Names. See AWS Instance docs here: %s.\n\n\tAWS Error: %w", "https://terraform.io/docs/providers/aws/r/instance.html", err)
 	}
 	if err != nil {
 		return fmt.Errorf("Error launching source instance: %s", err)
@@ -903,13 +857,9 @@ func resourceInstanceCreate(d *schema.ResourceData, meta interface{}) error {
 		aws.StringValue(instance.InstanceId))
 
 	stateConf := &resource.StateChangeConf{
-		Pending: []string{ec2.InstanceStateNamePending},
-		Target:  []string{ec2.InstanceStateNameRunning},
-		Refresh: InstanceStateRefreshFunc(
-			conn,
-			aws.StringValue(instance.InstanceId),
-			[]string{ec2.InstanceStateNameTerminated, ec2.InstanceStateNameShuttingDown},
-		),
+		Pending:    []string{ec2.InstanceStateNamePending},
+		Target:     []string{ec2.InstanceStateNameRunning},
+		Refresh:    InstanceStateRefreshFunc(conn, aws.StringValue(instance.InstanceId), []string{ec2.InstanceStateNameTerminated, ec2.InstanceStateNameShuttingDown}),
 		Timeout:    d.Timeout(schema.TimeoutCreate),
 		Delay:      10 * time.Second,
 		MinTimeout: 3 * time.Second,
@@ -1171,10 +1121,7 @@ func resourceInstanceRead(d *schema.ResourceData, meta interface{}) error {
 
 	if instance.Monitoring != nil && instance.Monitoring.State != nil {
 		monitoringState := aws.StringValue(instance.Monitoring.State)
-		d.Set(
-			"monitoring",
-			monitoringState == ec2.MonitoringStateEnabled || monitoringState == ec2.MonitoringStatePending,
-		)
+		d.Set("monitoring", monitoringState == ec2.MonitoringStateEnabled || monitoringState == ec2.MonitoringStatePending)
 	}
 
 	tags := KeyValueTags(instance.Tags).IgnoreAWS().IgnoreConfig(ignoreTagsConfig)
@@ -1261,8 +1208,7 @@ func resourceInstanceRead(d *schema.ResourceData, meta interface{}) error {
 
 	// AWS Standard will return InstanceCreditSpecification.NotSupported errors for EC2 Instance IDs outside T2 and T3 instance types
 	// Reference: https://github.com/hashicorp/terraform-provider-aws/issues/8055
-	if strings.HasPrefix(aws.StringValue(instance.InstanceType), "t2") ||
-		strings.HasPrefix(aws.StringValue(instance.InstanceType), "t3") {
+	if strings.HasPrefix(aws.StringValue(instance.InstanceType), "t2") || strings.HasPrefix(aws.StringValue(instance.InstanceType), "t3") {
 		creditSpecifications, err := getCreditSpecifications(conn, d.Id())
 
 		// Ignore UnsupportedOperation errors for AWS China and GovCloud (US)
@@ -1447,10 +1393,8 @@ func resourceInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
 
 		if d.HasChange("secondary_private_ips") {
 			if primaryInterface.NetworkInterfaceId == nil {
-				return fmt.Errorf(
-					"Failed to update secondary_private_ips on %q, which does not contain a primary network interface",
-					d.Id(),
-				)
+				return fmt.Errorf("Failed to update secondary_private_ips on %q, which does not contain a primary network interface",
+					d.Id())
 			}
 			o, n := d.GetChange("secondary_private_ips")
 			if o == nil {
@@ -1494,10 +1438,8 @@ func resourceInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
 
 		if d.HasChange("vpc_security_group_ids") {
 			if primaryInterface.NetworkInterfaceId == nil {
-				return fmt.Errorf(
-					"Failed to update vpc_security_group_ids on %q, which does not contain a primary network interface",
-					d.Id(),
-				)
+				return fmt.Errorf("Failed to update vpc_security_group_ids on %q, which does not contain a primary network interface",
+					d.Id())
 			}
 			var groups []*string
 			if v := d.Get("vpc_security_group_ids").(*schema.Set); v.Len() > 0 {
@@ -1599,12 +1541,7 @@ func resourceInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
 		err := resourceInstanceDisableAPITermination(conn, d.Id(), d.Get("disable_api_termination").(bool))
 
 		if err != nil {
-			return fmt.Errorf(
-				"error modifying instance (%s) attribute (%s): %w",
-				d.Id(),
-				ec2.InstanceAttributeNameDisableApiTermination,
-				err,
-			)
+			return fmt.Errorf("error modifying instance (%s) attribute (%s): %w", d.Id(), ec2.InstanceAttributeNameDisableApiTermination, err)
 		}
 	}
 
@@ -1719,9 +1656,7 @@ func resourceInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
 			if v, ok := d.Get("root_block_device.0.iops").(int); ok && v != 0 {
 				// Enforce IOPs usage with a valid volume type
 				// Reference: https://github.com/hashicorp/terraform-provider-aws/issues/12667
-				if t, ok := d.Get("root_block_device.0.volume_type").(string); ok && t != ec2.VolumeTypeIo1 &&
-					t != ec2.VolumeTypeIo2 &&
-					t != ec2.VolumeTypeGp3 {
+				if t, ok := d.Get("root_block_device.0.volume_type").(string); ok && t != ec2.VolumeTypeIo1 && t != ec2.VolumeTypeIo2 && t != ec2.VolumeTypeGp3 {
 					if t == "" {
 						// Volume defaults to gp2
 						t = ec2.VolumeTypeGp2
@@ -1781,12 +1716,7 @@ func resourceInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
 					},
 				})
 				if err != nil {
-					return fmt.Errorf(
-						"error modifying delete on termination attribute for EC2 instance %q block device %q: %w",
-						d.Id(),
-						deviceName,
-						err,
-					)
+					return fmt.Errorf("error modifying delete on termination attribute for EC2 instance %q block device %q: %w", d.Id(), deviceName, err)
 				}
 
 				stateConf := &resource.StateChangeConf{
@@ -1799,11 +1729,8 @@ func resourceInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
 
 				_, err = stateConf.WaitForState()
 				if err != nil {
-					return fmt.Errorf(
-						"Error waiting for instance (%s) to apply DeleteOnTermination attribute update: %s",
-						d.Id(),
-						err,
-					)
+					return fmt.Errorf("Error waiting for instance (%s) to apply DeleteOnTermination attribute update: %s",
+						d.Id(), err)
 				}
 			}
 		}
@@ -1822,15 +1749,12 @@ func resourceInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
 	if d.HasChange("capacity_reservation_specification") && !d.IsNewResource() {
 		if v, ok := d.GetOk("capacity_reservation_specification"); ok {
 			capacityReservationSpecification := expandCapacityReservationSpecification(v.([]interface{}))
-			if *capacityReservationSpecification != (ec2.CapacityReservationSpecification{}) &&
-				capacityReservationSpecification != nil {
+			if *capacityReservationSpecification != (ec2.CapacityReservationSpecification{}) && capacityReservationSpecification != nil {
 				log.Printf("[DEBUG] Modifying capacity reservation for instance %s", d.Id())
-				_, err := conn.ModifyInstanceCapacityReservationAttributes(
-					&ec2.ModifyInstanceCapacityReservationAttributesInput{
-						CapacityReservationSpecification: capacityReservationSpecification,
-						InstanceId:                       aws.String(d.Id()),
-					},
-				)
+				_, err := conn.ModifyInstanceCapacityReservationAttributes(&ec2.ModifyInstanceCapacityReservationAttributesInput{
+					CapacityReservationSpecification: capacityReservationSpecification,
+					InstanceId:                       aws.String(d.Id()),
+				})
 
 				if err != nil {
 					return fmt.Errorf("Error updating instance capacity specification: %s", err)
@@ -1851,12 +1775,7 @@ func resourceInstanceDelete(d *schema.ResourceData, meta interface{}) error {
 	err := resourceInstanceDisableAPITermination(conn, d.Id(), d.Get("disable_api_termination").(bool))
 
 	if err != nil {
-		log.Printf(
-			"[WARN] attempting to terminate EC2 instance (%s) despite error modifying attribute (%s): %s",
-			d.Id(),
-			ec2.InstanceAttributeNameDisableApiTermination,
-			err,
-		)
+		log.Printf("[WARN] attempting to terminate EC2 instance (%s) despite error modifying attribute (%s): %s", d.Id(), ec2.InstanceAttributeNameDisableApiTermination, err)
 	}
 
 	err = terminateInstance(conn, d.Id(), d.Timeout(schema.TimeoutDelete))
@@ -1929,23 +1848,12 @@ func resourceInstanceDisableAPITermination(conn *ec2.EC2, id string, disableAPIT
 	})
 
 	if tfawserr.ErrMessageContains(err, "UnsupportedOperation", "not supported for spot instances") {
-		log.Printf(
-			"[WARN] failed to modify instance (%s) attribute (%s): %s",
-			id,
-			ec2.InstanceAttributeNameDisableApiTermination,
-			err,
-		)
+		log.Printf("[WARN] failed to modify instance (%s) attribute (%s): %s", id, ec2.InstanceAttributeNameDisableApiTermination, err)
 		return nil
 	}
 
 	if err != nil {
-		return fmt.Errorf(
-			"error modify instance (%s) attribute (%s) to value %t: %w",
-			id,
-			ec2.InstanceAttributeNameDisableApiTermination,
-			disableAPITermination,
-			err,
-		)
+		return fmt.Errorf("error modify instance (%s) attribute (%s) to value %t: %w", id, ec2.InstanceAttributeNameDisableApiTermination, disableAPITermination, err)
 	}
 
 	return nil
@@ -1955,11 +1863,7 @@ func resourceInstanceDisableAPITermination(conn *ec2.EC2, id string, disableAPIT
 // as input by first stopping the EC2 instance before the modification
 // and then starting up the EC2 instance after modification.
 // Reference: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Stop_Start.html
-func modifyAttributeWithInstanceStopStart(
-	d *schema.ResourceData,
-	conn *ec2.EC2,
-	input *ec2.ModifyInstanceAttributeInput,
-) error {
+func modifyAttributeWithInstanceStopStart(d *schema.ResourceData, conn *ec2.EC2, input *ec2.ModifyInstanceAttributeInput) error {
 	log.Printf("[INFO] Stopping Instance %q for attribute change", d.Id())
 	_, err := conn.StopInstances(&ec2.StopInstancesInput{
 		InstanceIds: []*string{aws.String(d.Id())},
@@ -1985,11 +1889,7 @@ func modifyAttributeWithInstanceStopStart(
 	err = resource.Retry(InstanceAttributePropagationTimeout, func() *resource.RetryError {
 		_, err := conn.StartInstances(startInput)
 
-		if tfawserr.ErrMessageContains(
-			err,
-			ErrCodeInvalidParameterValue,
-			"LaunchPlan instance type does not match attribute value",
-		) {
+		if tfawserr.ErrMessageContains(err, ErrCodeInvalidParameterValue, "LaunchPlan instance type does not match attribute value") {
 			return resource.RetryableError(err)
 		}
 
@@ -2227,11 +2127,7 @@ func disassociateInstanceProfile(associationId *string, conn *ec2.EC2) error {
 	return nil
 }
 
-func readBlockDevicesFromInstance(
-	d *schema.ResourceData,
-	instance *ec2.Instance,
-	conn *ec2.EC2,
-) (map[string]interface{}, error) {
+func readBlockDevicesFromInstance(d *schema.ResourceData, instance *ec2.Instance, conn *ec2.EC2) (map[string]interface{}, error) {
 	blockDevices := make(map[string]interface{})
 	blockDevices["ebs"] = make([]map[string]interface{}, 0)
 	blockDevices["root"] = nil
@@ -2296,8 +2192,7 @@ func readBlockDevicesFromInstance(
 		if instanceBd.DeviceName != nil {
 			bd["device_name"] = aws.StringValue(instanceBd.DeviceName)
 		}
-		if v, ok := d.GetOk("volume_tags"); (!ok || v == nil || len(v.(map[string]interface{})) == 0) &&
-			vol.Tags != nil {
+		if v, ok := d.GetOk("volume_tags"); (!ok || v == nil || len(v.(map[string]interface{})) == 0) && vol.Tags != nil {
 			bd["tags"] = KeyValueTags(vol.Tags).IgnoreAWS().Map()
 		}
 
@@ -2442,11 +2337,7 @@ func FetchRootDeviceName(ami string, conn *ec2.EC2) (*string, error) {
 	return rootDeviceName, nil
 }
 
-func buildNetworkInterfaceOpts(
-	d *schema.ResourceData,
-	groups []*string,
-	nInterfaces interface{},
-) []*ec2.InstanceNetworkInterfaceSpecification {
+func buildNetworkInterfaceOpts(d *schema.ResourceData, groups []*string, nInterfaces interface{}) []*ec2.InstanceNetworkInterfaceSpecification {
 	networkInterfaces := []*ec2.InstanceNetworkInterfaceSpecification{}
 	// Get necessary items
 	subnet, hasSubnet := d.GetOk("subnet_id")
@@ -2546,8 +2437,7 @@ func readBlockDeviceMappingsFromConfig(d *schema.ResourceData, conn *ec2.EC2) ([
 			if v, ok := bd["volume_type"].(string); ok && v != "" {
 				ebs.VolumeType = aws.String(v)
 				if iops, ok := bd["iops"].(int); ok && iops > 0 {
-					if ec2.VolumeTypeIo1 == strings.ToLower(v) || ec2.VolumeTypeIo2 == strings.ToLower(v) ||
-						ec2.VolumeTypeGp3 == strings.ToLower(v) {
+					if ec2.VolumeTypeIo1 == strings.ToLower(v) || ec2.VolumeTypeIo2 == strings.ToLower(v) || ec2.VolumeTypeGp3 == strings.ToLower(v) {
 						// Condition: This parameter is required for requests to create io1 or io2
 						// volumes and optional for gp3; it is not used in requests to create gp2, st1, sc1, or
 						// standard volumes.
@@ -2621,8 +2511,7 @@ func readBlockDeviceMappingsFromConfig(d *schema.ResourceData, conn *ec2.EC2) ([
 			if v, ok := bd["volume_type"].(string); ok && v != "" {
 				ebs.VolumeType = aws.String(v)
 				if iops, ok := bd["iops"].(int); ok && iops > 0 {
-					if ec2.VolumeTypeIo1 == strings.ToLower(v) || ec2.VolumeTypeIo2 == strings.ToLower(v) ||
-						ec2.VolumeTypeGp3 == strings.ToLower(v) {
+					if ec2.VolumeTypeIo1 == strings.ToLower(v) || ec2.VolumeTypeIo2 == strings.ToLower(v) || ec2.VolumeTypeGp3 == strings.ToLower(v) {
 						// Only set the iops attribute if the volume type is io1, io2, or gp3. Setting otherwise
 						// can trigger a refresh/plan loop based on the computed value that is given
 						// from AWS, and prevent us from specifying 0 as a valid iops.
@@ -2763,12 +2652,7 @@ func readInstanceShutdownBehavior(d *schema.ResourceData, conn *ec2.EC2) error {
 	})
 
 	if err != nil {
-		return fmt.Errorf(
-			"error while describing instance (%s) attribute (%s): %w",
-			d.Id(),
-			ec2.InstanceAttributeNameInstanceInitiatedShutdownBehavior,
-			err,
-		)
+		return fmt.Errorf("error while describing instance (%s) attribute (%s): %w", d.Id(), ec2.InstanceAttributeNameInstanceInitiatedShutdownBehavior, err)
 	}
 
 	if output != nil && output.InstanceInitiatedShutdownBehavior != nil {
@@ -2967,9 +2851,7 @@ func buildInstanceOpts(d *schema.ResourceData, meta interface{}) (*awsInstanceOp
 		// See http://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_RunInstances.html
 		sgs := v.(*schema.Set).List()
 		if len(sgs) > 0 && hasSubnet {
-			log.Print(
-				"[WARN] Deprecated. Attempting to use 'security_groups' within a VPC instance. Use 'vpc_security_group_ids' instead.",
-			)
+			log.Print("[WARN] Deprecated. Attempting to use 'security_groups' within a VPC instance. Use 'vpc_security_group_ids' instead.")
 		}
 		for _, v := range sgs {
 			str := v.(string)
@@ -3293,9 +3175,7 @@ func expandCapacityReservationSpecification(crs []interface{}) *ec2.CapacityRese
 	}
 
 	if v, ok := m["capacity_reservation_target"].([]interface{}); ok && len(v) > 0 {
-		capacityReservationSpecification.CapacityReservationTarget = expandCapacityReservationTarget(
-			v[0].(map[string]interface{}),
-		)
+		capacityReservationSpecification.CapacityReservationTarget = expandCapacityReservationTarget(v[0].(map[string]interface{}))
 	}
 
 	return capacityReservationSpecification
@@ -3404,8 +3284,7 @@ func getInstanceLaunchTemplate(conn *ec2.EC2, d *schema.ResourceData) ([]map[str
 	name, defaultVersion, latestVersion, err := getLaunchTemplateSpecification(conn, id)
 
 	if err != nil {
-		if tfawserr.ErrCodeEquals(err, "InvalidLaunchTemplateId.Malformed") ||
-			tfawserr.ErrCodeEquals(err, "InvalidLaunchTemplateId.NotFound") {
+		if tfawserr.ErrCodeEquals(err, "InvalidLaunchTemplateId.Malformed") || tfawserr.ErrCodeEquals(err, "InvalidLaunchTemplateId.NotFound") {
 			// Instance is tagged with non existent template just set it to nil
 			log.Printf("[WARN] Launch template %s not found, removing from state", id)
 			return nil, nil
