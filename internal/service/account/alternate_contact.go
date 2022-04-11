@@ -48,12 +48,9 @@ func ResourceAlternateContact() *schema.Resource {
 				ValidateFunc: verify.ValidAccountID,
 			},
 			"email_address": {
-				Type:     schema.TypeString,
-				Required: true,
-				ValidateFunc: validation.StringMatch(
-					regexp.MustCompile(`[\w+=,.-]+@[\w.-]+\.[\w]+`),
-					"must be a valid email address",
-				),
+				Type:         schema.TypeString,
+				Required:     true,
+				ValidateFunc: validation.StringMatch(regexp.MustCompile(`[\w+=,.-]+@[\w.-]+\.[\w]+`), "must be a valid email address"),
 			},
 			"name": {
 				Type:         schema.TypeString,
@@ -61,12 +58,9 @@ func ResourceAlternateContact() *schema.Resource {
 				ValidateFunc: validation.StringLenBetween(1, 64),
 			},
 			"phone_number": {
-				Type:     schema.TypeString,
-				Required: true,
-				ValidateFunc: validation.StringMatch(
-					regexp.MustCompile(`^[\s0-9()+-]+$`),
-					"must be a valid phone number",
-				),
+				Type:         schema.TypeString,
+				Required:     true,
+				ValidateFunc: validation.StringMatch(regexp.MustCompile(`^[\s0-9()+-]+$`), "must be a valid phone number"),
 			},
 			"title": {
 				Type:         schema.TypeString,
@@ -237,10 +231,6 @@ func AlternateContactParseResourceID(id string) (string, string, error) {
 	case 2:
 		return parts[0], parts[1], nil
 	default:
-		return "", "", fmt.Errorf(
-			"unexpected format for ID (%[1]s), expected ContactType or AccountID%[2]sContactType",
-			id,
-			alternateContactResourceIDSeparator,
-		)
+		return "", "", fmt.Errorf("unexpected format for ID (%[1]s), expected ContactType or AccountID%[2]sContactType", id, alternateContactResourceIDSeparator)
 	}
 }
