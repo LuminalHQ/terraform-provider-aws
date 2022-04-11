@@ -777,7 +777,7 @@ func resourceBucketRead(d *schema.ResourceData, meta interface{}) error {
 		}
 
 		// RM-4400 - more descriptive 403 errors
-		if err != nil && !(tfawserr.ErrCodeEquals(err, "ServerSideEncryptionConfigurationNotFoundError") && tfawserr.ErrMessageContains("encryption configuration was not found")) {
+		if err != nil && !tfawserr.ErrMessageContains(err, "ServerSideEncryptionConfigurationNotFoundError", "encryption configuration was not found") {
 			return resource.NonRetryableError(err)
 		}
 

@@ -2155,7 +2155,7 @@ func readBlockDevicesFromInstance(d *schema.ResourceData, instance *ec2.Instance
 		VolumeIds: volIDs,
 	})
 	if err != nil {
-		if tfawserr.ErrCodeEquals(err, "InvalidVolume.NotFound") && tfawserr.ErrMessageContains(err, "does not exist") {
+		if tfawserr.ErrMessageContains(err, "InvalidVolume.NotFound", "does not exist") {
 			log.Print("[WARN] Unable to describe volumes attached to instance")
 			return blockDevices, nil
 		}
