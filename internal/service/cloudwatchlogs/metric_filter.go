@@ -273,7 +273,7 @@ func flattenCloudWatchLogMetricTransformations(ts []*cloudwatchlogs.MetricTransf
 	if transform.DefaultValue == nil {
 		m["default_value"] = ""
 	} else {
-		m["default_value"] = strconv.FormatFloat(aws.Float64Value(transform.DefaultValue), 'f', -1, 64)
+		m["default_value"] = fmt.Sprintf("%v", *ts[0].DefaultValue)
 	}
 
 	if dims := transform.Dimensions; len(dims) > 0 {

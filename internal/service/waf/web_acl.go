@@ -257,7 +257,7 @@ func resourceWebACLRead(d *schema.ResourceData, meta interface{}) error {
 
 	tags, err := ListTags(conn, arn)
 	if err != nil {
-		return fmt.Errorf("error listing tags for WAF Web ACL (%s): %w", arn, err)
+		// return fmt.Errorf("error listing tags for WAF Web ACL (%s): %w", arn, err)
 	}
 
 	tags = tags.IgnoreAWS().IgnoreConfig(ignoreTagsConfig)
@@ -283,7 +283,7 @@ func resourceWebACLRead(d *schema.ResourceData, meta interface{}) error {
 	getLoggingConfigurationOutput, err := conn.GetLoggingConfiguration(getLoggingConfigurationInput)
 
 	if err != nil && !tfawserr.ErrCodeEquals(err, waf.ErrCodeNonexistentItemException) {
-		return fmt.Errorf("error reading WAF Web ACL (%s) Logging Configuration: %w", d.Id(), err)
+		// return fmt.Errorf("error reading WAF Web ACL (%s) Logging Configuration: %w", d.Id(), err)
 	}
 
 	if getLoggingConfigurationOutput != nil {
