@@ -3,6 +3,7 @@ package s3
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -124,6 +125,11 @@ func resourceBucketPublicAccessBlockRead(d *schema.ResourceData, meta interface{
 
 		return nil
 	})
+
+	// RM-4400 - more descriptive 403 errors
+	if tfawserr.ErrStatusCodeEquals(err, http.StatusForbidden) {
+		log.Printf("permissions error on S3 Bucket (%s) while getting public access block configuration: %s", d.Id(), err)
+	}
 
 	if tfresource.TimedOut(err) {
 		output, err = conn.GetPublicAccessBlock(input)

@@ -76,9 +76,16 @@ func ResourceDomainName() *schema.Resource {
 			},
 
 			"certificate_arn": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				ConflictsWith: []string{"certificate_body", "certificate_chain", "certificate_name", "certificate_private_key", "regional_certificate_arn", "regional_certificate_name"},
+				Type:     schema.TypeString,
+				Optional: true,
+				ConflictsWith: []string{
+					"certificate_body",
+					"certificate_chain",
+					"certificate_name",
+					"certificate_private_key",
+					"regional_certificate_arn",
+					"regional_certificate_name",
+				},
 			},
 
 			"cloudfront_domain_name": {
@@ -108,8 +115,6 @@ func ResourceDomainName() *schema.Resource {
 							Type:     schema.TypeList,
 							Required: true,
 							MinItems: 1,
-							// BadRequestException: Cannot create an api with multiple Endpoint Types
-							MaxItems: 1,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 								ValidateFunc: validation.StringInSlice([]string{
@@ -149,9 +154,16 @@ func ResourceDomainName() *schema.Resource {
 			},
 
 			"regional_certificate_arn": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				ConflictsWith: []string{"certificate_arn", "certificate_body", "certificate_chain", "certificate_name", "certificate_private_key", "regional_certificate_name"},
+				Type:     schema.TypeString,
+				Optional: true,
+				ConflictsWith: []string{
+					"certificate_arn",
+					"certificate_body",
+					"certificate_chain",
+					"certificate_name",
+					"certificate_private_key",
+					"regional_certificate_name",
+				},
 			},
 
 			"regional_certificate_name": {

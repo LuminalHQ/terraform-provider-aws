@@ -3,6 +3,7 @@ package s3
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -92,6 +93,11 @@ func resourceBucketPolicyRead(d *schema.ResourceData, meta interface{}) error {
 	pol, err := conn.GetBucketPolicy(&s3.GetBucketPolicyInput{
 		Bucket: aws.String(d.Id()),
 	})
+
+	// RM-4400 - more descriptive 403 errors
+	if tfawserr.ErrStatusCodeEquals(err, http.StatusForbidden) {
+		log.Printf("permissions error on S3 Bucket (%s) while getting bucket policy: %s", d.Id(), err)
+	}
 
 	v := ""
 	if err == nil && pol.Policy != nil {

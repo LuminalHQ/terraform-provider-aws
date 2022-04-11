@@ -504,7 +504,7 @@ func resourceNetworkInterfaceRead(d *schema.ResourceData, meta interface{}) erro
 	}.String()
 	d.Set("arn", arn)
 
-	if eni.Attachment != nil {
+	if eni.Attachment != nil && eni.Attachment.DeviceIndex != nil && eni.Attachment.AttachmentId != nil {
 		if err := d.Set("attachment", []interface{}{flattenNetworkInterfaceAttachment(eni.Attachment)}); err != nil {
 			return fmt.Errorf("error setting attachment: %w", err)
 		}

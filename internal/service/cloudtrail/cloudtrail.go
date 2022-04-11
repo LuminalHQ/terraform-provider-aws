@@ -292,10 +292,18 @@ func resourceCloudTrailCreate(d *schema.ResourceData, meta interface{}) error {
 		var err error
 		t, err = conn.CreateTrail(&input)
 		if err != nil {
-			if tfawserr.ErrMessageContains(err, cloudtrail.ErrCodeInvalidCloudWatchLogsRoleArnException, "Access denied.") {
+			if tfawserr.ErrMessageContains(
+				err,
+				cloudtrail.ErrCodeInvalidCloudWatchLogsRoleArnException,
+				"Access denied.",
+			) {
 				return resource.RetryableError(err)
 			}
-			if tfawserr.ErrMessageContains(err, cloudtrail.ErrCodeInvalidCloudWatchLogsLogGroupArnException, "Access denied.") {
+			if tfawserr.ErrMessageContains(
+				err,
+				cloudtrail.ErrCodeInvalidCloudWatchLogsLogGroupArnException,
+				"Access denied.",
+			) {
 				return resource.RetryableError(err)
 			}
 			return resource.NonRetryableError(err)
@@ -459,7 +467,14 @@ func resourceCloudTrailRead(d *schema.ResourceData, meta interface{}) error {
 func resourceCloudTrailUpdate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*conns.AWSClient).CloudTrailConn
 
-	if d.HasChangesExcept("tags", "tags_all", "insight_selector", "advanced_event_selector", "event_selector", "enable_logging") {
+	if d.HasChangesExcept(
+		"tags",
+		"tags_all",
+		"insight_selector",
+		"advanced_event_selector",
+		"event_selector",
+		"enable_logging",
+	) {
 		input := cloudtrail.UpdateTrailInput{
 			Name: aws.String(d.Id()),
 		}
@@ -500,10 +515,18 @@ func resourceCloudTrailUpdate(d *schema.ResourceData, meta interface{}) error {
 			var err error
 			_, err = conn.UpdateTrail(&input)
 			if err != nil {
-				if tfawserr.ErrMessageContains(err, cloudtrail.ErrCodeInvalidCloudWatchLogsRoleArnException, "Access denied.") {
+				if tfawserr.ErrMessageContains(
+					err,
+					cloudtrail.ErrCodeInvalidCloudWatchLogsRoleArnException,
+					"Access denied.",
+				) {
 					return resource.RetryableError(err)
 				}
-				if tfawserr.ErrMessageContains(err, cloudtrail.ErrCodeInvalidCloudWatchLogsLogGroupArnException, "Access denied.") {
+				if tfawserr.ErrMessageContains(
+					err,
+					cloudtrail.ErrCodeInvalidCloudWatchLogsLogGroupArnException,
+					"Access denied.",
+				) {
 					return resource.RetryableError(err)
 				}
 				return resource.NonRetryableError(err)
@@ -683,10 +706,11 @@ func expandEventSelectorDataResource(configured []interface{}) []*cloudtrail.Dat
 func flattenEventSelector(configured []*cloudtrail.EventSelector) []map[string]interface{} {
 	eventSelectors := make([]map[string]interface{}, 0, len(configured))
 
+	// We want to output all the selectors (note for advanced event selectors this is empty)
 	// Prevent default configurations shows differences
-	if len(configured) == 1 && len(configured[0].DataResources) == 0 && aws.StringValue(configured[0].ReadWriteType) == cloudtrail.ReadWriteTypeAll && len(configured[0].ExcludeManagementEventSources) == 0 {
-		return eventSelectors
-	}
+	// if len(configured) == 1 && len(configured[0].DataResources) == 0 && aws.StringValue(configured[0].ReadWriteType) == cloudtrail.ReadWriteTypeAll && len(configured[0].ExcludeManagementEventSources) == 0 {
+	// 	return eventSelectors
+	// }
 
 	for _, raw := range configured {
 		item := make(map[string]interface{})
@@ -807,7 +831,9 @@ func flattenAdvancedEventSelector(configured []*cloudtrail.AdvancedEventSelector
 	return advancedEventSelectors
 }
 
-func flattenAdvancedEventSelectorFieldSelector(configured []*cloudtrail.AdvancedFieldSelector) []map[string]interface{} {
+func flattenAdvancedEventSelectorFieldSelector(
+	configured []*cloudtrail.AdvancedFieldSelector,
+) []map[string]interface{} {
 	fieldSelectors := make([]map[string]interface{}, 0, len(configured))
 
 	for _, raw := range configured {
