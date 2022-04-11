@@ -76,16 +76,9 @@ func ResourceDomainName() *schema.Resource {
 			},
 
 			"certificate_arn": {
-				Type:     schema.TypeString,
-				Optional: true,
-				ConflictsWith: []string{
-					"certificate_body",
-					"certificate_chain",
-					"certificate_name",
-					"certificate_private_key",
-					"regional_certificate_arn",
-					"regional_certificate_name",
-				},
+				Type:          schema.TypeString,
+				Optional:      true,
+				ConflictsWith: []string{"certificate_body", "certificate_chain", "certificate_name", "certificate_private_key", "regional_certificate_arn", "regional_certificate_name"},
 			},
 
 			"cloudfront_domain_name": {
@@ -154,16 +147,9 @@ func ResourceDomainName() *schema.Resource {
 			},
 
 			"regional_certificate_arn": {
-				Type:     schema.TypeString,
-				Optional: true,
-				ConflictsWith: []string{
-					"certificate_arn",
-					"certificate_body",
-					"certificate_chain",
-					"certificate_name",
-					"certificate_private_key",
-					"regional_certificate_name",
-				},
+				Type:          schema.TypeString,
+				Optional:      true,
+				ConflictsWith: []string{"certificate_arn", "certificate_body", "certificate_chain", "certificate_name", "certificate_private_key", "regional_certificate_name"},
 			},
 
 			"regional_certificate_name": {
