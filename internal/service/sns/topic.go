@@ -326,15 +326,15 @@ func resourceTopicRead(d *schema.ResourceData, meta interface{}) error {
 
 	tags, err := ListTags(conn, d.Id())
 
-	// if verify.CheckISOErrorTagsUnsupported(err) {
-	// 	// ISO partitions may not support tagging, giving error
-	// 	log.Printf("[WARN] failed listing tags for SNS Topic (%s): %s", d.Id(), err)
-	// 	return nil
-	// }
+	if verify.CheckISOErrorTagsUnsupported(err) {
+		// ISO partitions may not support tagging, giving error
+		log.Printf("[WARN] failed listing tags for SNS Topic (%s): %s", d.Id(), err)
+		return nil
+	}
 
-	// if err != nil {
-	// 	return fmt.Errorf("failed listing tags for SNS Topic (%s): %w", d.Id(), err)
-	// }
+	if err != nil {
+		return fmt.Errorf("failed listing tags for SNS Topic (%s): %w", d.Id(), err)
+	}
 
 	tags = tags.IgnoreAWS().IgnoreConfig(ignoreTagsConfig)
 

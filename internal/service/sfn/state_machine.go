@@ -229,11 +229,11 @@ func resourceStateMachineRead(d *schema.ResourceData, meta interface{}) error {
 	tags, err := ListTags(conn, d.Id())
 
 	if err != nil {
-		// if tfawserr.ErrCodeEquals(err, "UnknownOperationException") {
-		// 	return nil
-		// }
+		if tfawserr.ErrCodeEquals(err, "UnknownOperationException") {
+			return nil
+		}
 
-		// return fmt.Errorf("error listing tags for Step Function State Machine (%s): %w", d.Id(), err)
+		return fmt.Errorf("error listing tags for Step Function State Machine (%s): %w", d.Id(), err)
 	}
 
 	tags = tags.IgnoreAWS().IgnoreConfig(ignoreTagsConfig)

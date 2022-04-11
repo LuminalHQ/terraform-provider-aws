@@ -391,7 +391,7 @@ func resourcePatchBaselineRead(d *schema.ResourceData, meta interface{}) error {
 	tags, err := ListTags(conn, d.Id(), ssm.ResourceTypeForTaggingPatchBaseline)
 
 	if err != nil {
-		// return fmt.Errorf("error listing tags for SSM Patch Baseline (%s): %s", d.Id(), err)
+		return fmt.Errorf("error listing tags for SSM Patch Baseline (%s): %s", d.Id(), err)
 	}
 
 	tags = tags.IgnoreAWS().IgnoreConfig(ignoreTagsConfig)
