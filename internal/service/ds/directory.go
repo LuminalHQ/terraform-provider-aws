@@ -216,9 +216,7 @@ func buildVpcSettings(d *schema.ResourceData) (vpcSettings *directoryservice.Dir
 	return vpcSettings, nil
 }
 
-func buildConnectSettings(
-	d *schema.ResourceData,
-) (connectSettings *directoryservice.DirectoryConnectSettings, err error) {
+func buildConnectSettings(d *schema.ResourceData) (connectSettings *directoryservice.DirectoryConnectSettings, err error) {
 	v, ok := d.GetOk("connect_settings")
 	if !ok {
 		return nil, fmt.Errorf("connect_settings is required for type = ADConnector")
@@ -246,11 +244,7 @@ func buildConnectSettings(
 	return connectSettings, nil
 }
 
-func createDirectoryConnector(
-	conn *directoryservice.DirectoryService,
-	d *schema.ResourceData,
-	meta interface{},
-) (directoryId string, err error) {
+func createDirectoryConnector(conn *directoryservice.DirectoryService, d *schema.ResourceData, meta interface{}) (directoryId string, err error) {
 	defaultTagsConfig := meta.(*conns.AWSClient).DefaultTagsConfig
 	tags := defaultTagsConfig.MergeTags(tftags.New(d.Get("tags").(map[string]interface{})))
 
@@ -288,11 +282,7 @@ func createDirectoryConnector(
 	return *out.DirectoryId, nil
 }
 
-func createSimpleDirectoryService(
-	conn *directoryservice.DirectoryService,
-	d *schema.ResourceData,
-	meta interface{},
-) (directoryId string, err error) {
+func createSimpleDirectoryService(conn *directoryservice.DirectoryService, d *schema.ResourceData, meta interface{}) (directoryId string, err error) {
 	defaultTagsConfig := meta.(*conns.AWSClient).DefaultTagsConfig
 	tags := defaultTagsConfig.MergeTags(tftags.New(d.Get("tags").(map[string]interface{})))
 
@@ -330,11 +320,7 @@ func createSimpleDirectoryService(
 	return *out.DirectoryId, nil
 }
 
-func createActiveDirectoryService(
-	conn *directoryservice.DirectoryService,
-	d *schema.ResourceData,
-	meta interface{},
-) (directoryId string, err error) {
+func createActiveDirectoryService(conn *directoryservice.DirectoryService, d *schema.ResourceData, meta interface{}) (directoryId string, err error) {
 	defaultTagsConfig := meta.(*conns.AWSClient).DefaultTagsConfig
 	tags := defaultTagsConfig.MergeTags(tftags.New(d.Get("tags").(map[string]interface{})))
 
