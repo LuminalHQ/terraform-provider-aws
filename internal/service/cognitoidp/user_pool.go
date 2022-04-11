@@ -49,12 +49,9 @@ func ResourceUserPool() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"name": {
-										Type:     schema.TypeString,
-										Required: true,
-										ValidateFunc: validation.StringInSlice(
-											cognitoidentityprovider.RecoveryOptionNameType_Values(),
-											false,
-										),
+										Type:         schema.TypeString,
+										Required:     true,
+										ValidateFunc: validation.StringInSlice(cognitoidentityprovider.RecoveryOptionNameType_Values(), false),
 									},
 									"priority": {
 										Type:     schema.TypeInt,
@@ -135,11 +132,8 @@ func ResourceUserPool() *schema.Resource {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Schema{
-					Type: schema.TypeString,
-					ValidateFunc: validation.StringInSlice(
-						cognitoidentityprovider.VerifiedAttributeType_Values(),
-						false,
-					),
+					Type:         schema.TypeString,
+					ValidateFunc: validation.StringInSlice(cognitoidentityprovider.VerifiedAttributeType_Values(), false),
 				},
 			},
 			"creation_date": {
@@ -175,13 +169,10 @@ func ResourceUserPool() *schema.Resource {
 							Optional: true,
 						},
 						"email_sending_account": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  cognitoidentityprovider.EmailSendingAccountTypeCognitoDefault,
-							ValidateFunc: validation.StringInSlice(
-								cognitoidentityprovider.EmailSendingAccountType_Values(),
-								false,
-							),
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      cognitoidentityprovider.EmailSendingAccountTypeCognitoDefault,
+							ValidateFunc: validation.StringInSlice(cognitoidentityprovider.EmailSendingAccountType_Values(), false),
 						},
 						"from_email_address": {
 							Type:     schema.TypeString,
@@ -192,10 +183,8 @@ func ResourceUserPool() *schema.Resource {
 							Optional: true,
 							ValidateFunc: validation.Any(
 								validation.StringInSlice([]string{""}, false),
-								validation.StringMatch(
-									regexp.MustCompile(`[\p{L}\p{M}\p{S}\p{N}\p{P}]+@[\p{L}\p{M}\p{S}\p{N}\p{P}]+`),
-									`must satisfy regular expression pattern: [\p{L}\p{M}\p{S}\p{N}\p{P}]+@[\p{L}\p{M}\p{S}\p{N}\p{P}]+`,
-								),
+								validation.StringMatch(regexp.MustCompile(`[\p{L}\p{M}\p{S}\p{N}\p{P}]+@[\p{L}\p{M}\p{S}\p{N}\p{P}]+`),
+									`must satisfy regular expression pattern: [\p{L}\p{M}\p{S}\p{N}\p{P}]+@[\p{L}\p{M}\p{S}\p{N}\p{P}]+`),
 							),
 						},
 						"source_arn": {
@@ -299,12 +288,9 @@ func ResourceUserPool() *schema.Resource {
 										ValidateFunc: verify.ValidARN,
 									},
 									"lambda_version": {
-										Type:     schema.TypeString,
-										Required: true,
-										ValidateFunc: validation.StringInSlice(
-											cognitoidentityprovider.CustomEmailSenderLambdaVersionType_Values(),
-											false,
-										),
+										Type:         schema.TypeString,
+										Required:     true,
+										ValidateFunc: validation.StringInSlice(cognitoidentityprovider.CustomEmailSenderLambdaVersionType_Values(), false),
 									},
 								},
 							},
@@ -323,12 +309,9 @@ func ResourceUserPool() *schema.Resource {
 										ValidateFunc: verify.ValidARN,
 									},
 									"lambda_version": {
-										Type:     schema.TypeString,
-										Required: true,
-										ValidateFunc: validation.StringInSlice(
-											cognitoidentityprovider.CustomSMSSenderLambdaVersionType_Values(),
-											false,
-										),
+										Type:         schema.TypeString,
+										Required:     true,
+										ValidateFunc: validation.StringInSlice(cognitoidentityprovider.CustomSMSSenderLambdaVersionType_Values(), false),
 									},
 								},
 							},
@@ -400,12 +383,9 @@ func ResourceUserPool() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"attribute_data_type": {
-							Type:     schema.TypeString,
-							Required: true,
-							ValidateFunc: validation.StringInSlice(
-								cognitoidentityprovider.AttributeDataType_Values(),
-								false,
-							),
+							Type:         schema.TypeString,
+							Required:     true,
+							ValidateFunc: validation.StringInSlice(cognitoidentityprovider.AttributeDataType_Values(), false),
 						},
 						"developer_only_attribute": {
 							Type:     schema.TypeBool,
@@ -513,11 +493,8 @@ func ResourceUserPool() *schema.Resource {
 				Optional: true,
 				ForceNew: true,
 				Elem: &schema.Schema{
-					Type: schema.TypeString,
-					ValidateFunc: validation.StringInSlice(
-						cognitoidentityprovider.UsernameAttributeType_Values(),
-						false,
-					),
+					Type:         schema.TypeString,
+					ValidateFunc: validation.StringInSlice(cognitoidentityprovider.UsernameAttributeType_Values(), false),
 				},
 				ConflictsWith: []string{"alias_attributes"},
 			},
@@ -542,12 +519,9 @@ func ResourceUserPool() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"advanced_security_mode": {
-							Type:     schema.TypeString,
-							Required: true,
-							ValidateFunc: validation.StringInSlice(
-								cognitoidentityprovider.AdvancedSecurityModeType_Values(),
-								false,
-							),
+							Type:         schema.TypeString,
+							Required:     true,
+							ValidateFunc: validation.StringInSlice(cognitoidentityprovider.AdvancedSecurityModeType_Values(), false),
 						},
 					},
 				},
@@ -560,13 +534,10 @@ func ResourceUserPool() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"default_email_option": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  cognitoidentityprovider.DefaultEmailOptionTypeConfirmWithCode,
-							ValidateFunc: validation.StringInSlice(
-								cognitoidentityprovider.DefaultEmailOptionType_Values(),
-								false,
-							),
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      cognitoidentityprovider.DefaultEmailOptionTypeConfirmWithCode,
+							ValidateFunc: validation.StringInSlice(cognitoidentityprovider.DefaultEmailOptionType_Values(), false),
 						},
 						"email_message": {
 							Type:          schema.TypeString,
@@ -762,19 +733,11 @@ func resourceUserPoolCreate(d *schema.ResourceData, meta interface{}) error {
 	err := resource.Retry(tfiam.PropagationTimeout, func() *resource.RetryError {
 		var err error
 		resp, err = conn.CreateUserPool(params)
-		if tfawserr.ErrMessageContains(
-			err,
-			cognitoidentityprovider.ErrCodeInvalidSmsRoleTrustRelationshipException,
-			"Role does not have a trust relationship allowing Cognito to assume the role",
-		) {
+		if tfawserr.ErrMessageContains(err, cognitoidentityprovider.ErrCodeInvalidSmsRoleTrustRelationshipException, "Role does not have a trust relationship allowing Cognito to assume the role") {
 			log.Printf("[DEBUG] Received %s, retrying CreateUserPool", err)
 			return resource.RetryableError(err)
 		}
-		if tfawserr.ErrMessageContains(
-			err,
-			cognitoidentityprovider.ErrCodeInvalidSmsRoleAccessPolicyException,
-			"Role does not have permission to publish with SNS",
-		) {
+		if tfawserr.ErrMessageContains(err, cognitoidentityprovider.ErrCodeInvalidSmsRoleAccessPolicyException, "Role does not have permission to publish with SNS") {
 			log.Printf("[DEBUG] Received %s, retrying CreateUserPool", err)
 			return resource.RetryableError(err)
 		}
@@ -794,11 +757,9 @@ func resourceUserPoolCreate(d *schema.ResourceData, meta interface{}) error {
 
 	if v := d.Get("mfa_configuration").(string); v != cognitoidentityprovider.UserPoolMfaTypeOff {
 		input := &cognitoidentityprovider.SetUserPoolMfaConfigInput{
-			MfaConfiguration: aws.String(v),
-			SoftwareTokenMfaConfiguration: expandCognitoSoftwareTokenMfaConfiguration(
-				d.Get("software_token_mfa_configuration").([]interface{}),
-			),
-			UserPoolId: aws.String(d.Id()),
+			MfaConfiguration:              aws.String(v),
+			SoftwareTokenMfaConfiguration: expandCognitoSoftwareTokenMfaConfiguration(d.Get("software_token_mfa_configuration").([]interface{})),
+			UserPoolId:                    aws.String(d.Id()),
 		}
 
 		if v := d.Get("sms_configuration").([]interface{}); len(v) > 0 && v[0] != nil {
@@ -815,19 +776,11 @@ func resourceUserPoolCreate(d *schema.ResourceData, meta interface{}) error {
 		err := resource.Retry(tfiam.PropagationTimeout, func() *resource.RetryError {
 			_, err := conn.SetUserPoolMfaConfig(input)
 
-			if tfawserr.ErrMessageContains(
-				err,
-				cognitoidentityprovider.ErrCodeInvalidSmsRoleTrustRelationshipException,
-				"Role does not have a trust relationship allowing Cognito to assume the role",
-			) {
+			if tfawserr.ErrMessageContains(err, cognitoidentityprovider.ErrCodeInvalidSmsRoleTrustRelationshipException, "Role does not have a trust relationship allowing Cognito to assume the role") {
 				return resource.RetryableError(err)
 			}
 
-			if tfawserr.ErrMessageContains(
-				err,
-				cognitoidentityprovider.ErrCodeInvalidSmsRoleAccessPolicyException,
-				"Role does not have permission to publish with SNS",
-			) {
+			if tfawserr.ErrMessageContains(err, cognitoidentityprovider.ErrCodeInvalidSmsRoleAccessPolicyException, "Role does not have permission to publish with SNS") {
 				return resource.RetryableError(err)
 			}
 
@@ -1012,18 +965,15 @@ func resourceUserPoolUpdate(d *schema.ResourceData, meta interface{}) error {
 	) {
 		mfaConfiguration := d.Get("mfa_configuration").(string)
 		input := &cognitoidentityprovider.SetUserPoolMfaConfigInput{
-			MfaConfiguration: aws.String(mfaConfiguration),
-			SoftwareTokenMfaConfiguration: expandCognitoSoftwareTokenMfaConfiguration(
-				d.Get("software_token_mfa_configuration").([]interface{}),
-			),
-			UserPoolId: aws.String(d.Id()),
+			MfaConfiguration:              aws.String(mfaConfiguration),
+			SoftwareTokenMfaConfiguration: expandCognitoSoftwareTokenMfaConfiguration(d.Get("software_token_mfa_configuration").([]interface{})),
+			UserPoolId:                    aws.String(d.Id()),
 		}
 
 		// Since SMS configuration applies to both verification and MFA, only include if MFA is enabled.
 		// Otherwise, the API will return the following error:
 		// InvalidParameterException: Invalid MFA configuration given, can't turn off MFA and configure an MFA together.
-		if v := d.Get("sms_configuration").([]interface{}); len(v) > 0 && v[0] != nil &&
-			mfaConfiguration != cognitoidentityprovider.UserPoolMfaTypeOff {
+		if v := d.Get("sms_configuration").([]interface{}); len(v) > 0 && v[0] != nil && mfaConfiguration != cognitoidentityprovider.UserPoolMfaTypeOff {
 			input.SmsMfaConfiguration = &cognitoidentityprovider.SmsMfaConfigType{
 				SmsConfiguration: expandCognitoSmsConfiguration(v),
 			}
@@ -1037,19 +987,11 @@ func resourceUserPoolUpdate(d *schema.ResourceData, meta interface{}) error {
 		err := resource.Retry(tfiam.PropagationTimeout, func() *resource.RetryError {
 			_, err := conn.SetUserPoolMfaConfig(input)
 
-			if tfawserr.ErrMessageContains(
-				err,
-				cognitoidentityprovider.ErrCodeInvalidSmsRoleTrustRelationshipException,
-				"Role does not have a trust relationship allowing Cognito to assume the role",
-			) {
+			if tfawserr.ErrMessageContains(err, cognitoidentityprovider.ErrCodeInvalidSmsRoleTrustRelationshipException, "Role does not have a trust relationship allowing Cognito to assume the role") {
 				return resource.RetryableError(err)
 			}
 
-			if tfawserr.ErrMessageContains(
-				err,
-				cognitoidentityprovider.ErrCodeInvalidSmsRoleAccessPolicyException,
-				"Role does not have permission to publish with SNS",
-			) {
+			if tfawserr.ErrMessageContains(err, cognitoidentityprovider.ErrCodeInvalidSmsRoleAccessPolicyException, "Role does not have permission to publish with SNS") {
 				return resource.RetryableError(err)
 			}
 
@@ -1217,27 +1159,15 @@ func resourceUserPoolUpdate(d *schema.ResourceData, meta interface{}) error {
 		// to the User Pool.
 		err := resource.Retry(tfiam.PropagationTimeout, func() *resource.RetryError {
 			_, err := conn.UpdateUserPool(params)
-			if tfawserr.ErrMessageContains(
-				err,
-				cognitoidentityprovider.ErrCodeInvalidSmsRoleTrustRelationshipException,
-				"Role does not have a trust relationship allowing Cognito to assume the role",
-			) {
+			if tfawserr.ErrMessageContains(err, cognitoidentityprovider.ErrCodeInvalidSmsRoleTrustRelationshipException, "Role does not have a trust relationship allowing Cognito to assume the role") {
 				log.Printf("[DEBUG] Received %s, retrying UpdateUserPool", err)
 				return resource.RetryableError(err)
 			}
-			if tfawserr.ErrMessageContains(
-				err,
-				cognitoidentityprovider.ErrCodeInvalidSmsRoleAccessPolicyException,
-				"Role does not have permission to publish with SNS",
-			) {
+			if tfawserr.ErrMessageContains(err, cognitoidentityprovider.ErrCodeInvalidSmsRoleAccessPolicyException, "Role does not have permission to publish with SNS") {
 				log.Printf("[DEBUG] Received %s, retrying UpdateUserPool", err)
 				return resource.RetryableError(err)
 			}
-			if tfawserr.ErrMessageContains(
-				err,
-				cognitoidentityprovider.ErrCodeInvalidParameterException,
-				"Please use TemporaryPasswordValidityDays in PasswordPolicy instead of UnusedAccountValidityDays",
-			) {
+			if tfawserr.ErrMessageContains(err, cognitoidentityprovider.ErrCodeInvalidParameterException, "Please use TemporaryPasswordValidityDays in PasswordPolicy instead of UnusedAccountValidityDays") {
 				log.Printf("[DEBUG] Received %s, retrying UpdateUserPool without UnusedAccountValidityDays", err)
 				params.AdminCreateUserConfig.UnusedAccountValidityDays = nil
 				return resource.RetryableError(err)
@@ -1259,18 +1189,12 @@ func resourceUserPoolUpdate(d *schema.ResourceData, meta interface{}) error {
 		oldSchema, newSchema := d.GetChange("schema")
 		if oldSchema.(*schema.Set).Difference(newSchema.(*schema.Set)).Len() == 0 {
 			params := &cognitoidentityprovider.AddCustomAttributesInput{
-				UserPoolId: aws.String(d.Id()),
-				CustomAttributes: expandCognitoUserPoolSchema(
-					newSchema.(*schema.Set).Difference(oldSchema.(*schema.Set)).List(),
-				),
+				UserPoolId:       aws.String(d.Id()),
+				CustomAttributes: expandCognitoUserPoolSchema(newSchema.(*schema.Set).Difference(oldSchema.(*schema.Set)).List()),
 			}
 			_, err := conn.AddCustomAttributes(params)
 			if err != nil {
-				return fmt.Errorf(
-					"error updating Cognito User Pool (%s): unable to add custom attributes from schema: %w",
-					d.Id(),
-					err,
-				)
+				return fmt.Errorf("error updating Cognito User Pool (%s): unable to add custom attributes from schema: %w", d.Id(), err)
 			}
 		} else {
 			return fmt.Errorf("error updating Cognito User Pool (%s): cannot modify or remove schema items", d.Id())
@@ -1322,9 +1246,7 @@ func expandCognitoSmsConfiguration(tfList []interface{}) *cognitoidentityprovide
 	return apiObject
 }
 
-func expandCognitoSoftwareTokenMfaConfiguration(
-	tfList []interface{},
-) *cognitoidentityprovider.SoftwareTokenMfaConfigType {
+func expandCognitoSoftwareTokenMfaConfiguration(tfList []interface{}) *cognitoidentityprovider.SoftwareTokenMfaConfigType {
 	if len(tfList) == 0 || tfList[0] == nil {
 		return nil
 	}
@@ -1358,9 +1280,7 @@ func flattenCognitoSmsConfiguration(apiObject *cognitoidentityprovider.SmsConfig
 	return []interface{}{tfMap}
 }
 
-func flattenCognitoSoftwareTokenMfaConfiguration(
-	apiObject *cognitoidentityprovider.SoftwareTokenMfaConfigType,
-) []interface{} {
+func flattenCognitoSoftwareTokenMfaConfiguration(apiObject *cognitoidentityprovider.SoftwareTokenMfaConfigType) []interface{} {
 	if apiObject == nil {
 		return nil
 	}
@@ -1374,9 +1294,7 @@ func flattenCognitoSoftwareTokenMfaConfiguration(
 	return []interface{}{tfMap}
 }
 
-func expandCognitoUserPoolAccountRecoverySettingConfig(
-	config map[string]interface{},
-) *cognitoidentityprovider.AccountRecoverySettingType {
+func expandCognitoUserPoolAccountRecoverySettingConfig(config map[string]interface{}) *cognitoidentityprovider.AccountRecoverySettingType {
 	configs := &cognitoidentityprovider.AccountRecoverySettingType{}
 
 	mechs := make([]*cognitoidentityprovider.RecoveryOptionType, 0)
@@ -1405,9 +1323,7 @@ func expandCognitoUserPoolAccountRecoverySettingConfig(
 	return configs
 }
 
-func flattenCognitoUserPoolAccountRecoverySettingConfig(
-	config *cognitoidentityprovider.AccountRecoverySettingType,
-) []interface{} {
+func flattenCognitoUserPoolAccountRecoverySettingConfig(config *cognitoidentityprovider.AccountRecoverySettingType) []interface{} {
 	if config == nil {
 		return nil
 	}
@@ -1429,9 +1345,7 @@ func flattenCognitoUserPoolAccountRecoverySettingConfig(
 	return []interface{}{settings}
 }
 
-func flattenCognitoUserPoolEmailConfiguration(
-	s *cognitoidentityprovider.EmailConfigurationType,
-) []map[string]interface{} {
+func flattenCognitoUserPoolEmailConfiguration(s *cognitoidentityprovider.EmailConfigurationType) []map[string]interface{} {
 	m := make(map[string]interface{})
 
 	if s == nil {
@@ -1465,9 +1379,7 @@ func flattenCognitoUserPoolEmailConfiguration(
 	return []map[string]interface{}{}
 }
 
-func expandCognitoUserPoolAdminCreateUserConfig(
-	config map[string]interface{},
-) *cognitoidentityprovider.AdminCreateUserConfigType {
+func expandCognitoUserPoolAdminCreateUserConfig(config map[string]interface{}) *cognitoidentityprovider.AdminCreateUserConfigType {
 	configs := &cognitoidentityprovider.AdminCreateUserConfigType{}
 
 	if v, ok := config["allow_admin_create_user_only"]; ok {
@@ -1503,9 +1415,7 @@ func expandCognitoUserPoolAdminCreateUserConfig(
 	return configs
 }
 
-func flattenCognitoUserPoolAdminCreateUserConfig(
-	s *cognitoidentityprovider.AdminCreateUserConfigType,
-) []map[string]interface{} {
+func flattenCognitoUserPoolAdminCreateUserConfig(s *cognitoidentityprovider.AdminCreateUserConfigType) []map[string]interface{} {
 	config := map[string]interface{}{}
 
 	if s == nil {
@@ -1539,9 +1449,7 @@ func flattenCognitoUserPoolAdminCreateUserConfig(
 	return []map[string]interface{}{config}
 }
 
-func expandCognitoUserPoolDeviceConfiguration(
-	config map[string]interface{},
-) *cognitoidentityprovider.DeviceConfigurationType {
+func expandCognitoUserPoolDeviceConfiguration(config map[string]interface{}) *cognitoidentityprovider.DeviceConfigurationType {
 	configs := &cognitoidentityprovider.DeviceConfigurationType{}
 
 	if v, ok := config["challenge_required_on_new_device"]; ok {
@@ -1804,9 +1712,7 @@ func expandCognitoUserPoolSchema(inputs []interface{}) []*cognitoidentityprovide
 	return configs
 }
 
-func flattenCognitoUserPoolSchema(
-	configuredAttributes, inputs []*cognitoidentityprovider.SchemaAttributeType,
-) []map[string]interface{} {
+func flattenCognitoUserPoolSchema(configuredAttributes, inputs []*cognitoidentityprovider.SchemaAttributeType) []map[string]interface{} {
 	values := make([]map[string]interface{}, 0)
 
 	for _, input := range inputs {
@@ -1847,11 +1753,8 @@ func flattenCognitoUserPoolSchema(
 			"attribute_data_type":      aws.StringValue(input.AttributeDataType),
 			"developer_only_attribute": aws.BoolValue(input.DeveloperOnlyAttribute),
 			"mutable":                  aws.BoolValue(input.Mutable),
-			"name": strings.TrimPrefix(
-				strings.TrimPrefix(aws.StringValue(input.Name), "dev:"),
-				"custom:",
-			),
-			"required": aws.BoolValue(input.Required),
+			"name":                     strings.TrimPrefix(strings.TrimPrefix(aws.StringValue(input.Name), "dev:"), "custom:"),
+			"required":                 aws.BoolValue(input.Required),
 		}
 
 		if input.NumberAttributeConstraints != nil {
@@ -1888,9 +1791,7 @@ func flattenCognitoUserPoolSchema(
 	return values
 }
 
-func expandCognitoUserPoolUsernameConfiguration(
-	config map[string]interface{},
-) *cognitoidentityprovider.UsernameConfigurationType {
+func expandCognitoUserPoolUsernameConfiguration(config map[string]interface{}) *cognitoidentityprovider.UsernameConfigurationType {
 	usernameConfigurationType := &cognitoidentityprovider.UsernameConfigurationType{
 		CaseSensitive: aws.Bool(config["case_sensitive"].(bool)),
 	}
@@ -1898,9 +1799,7 @@ func expandCognitoUserPoolUsernameConfiguration(
 	return usernameConfigurationType
 }
 
-func flattenCognitoUserPoolUsernameConfiguration(
-	u *cognitoidentityprovider.UsernameConfigurationType,
-) []map[string]interface{} {
+func flattenCognitoUserPoolUsernameConfiguration(u *cognitoidentityprovider.UsernameConfigurationType) []map[string]interface{} {
 	m := map[string]interface{}{}
 
 	if u == nil {
@@ -1912,9 +1811,7 @@ func flattenCognitoUserPoolUsernameConfiguration(
 	return []map[string]interface{}{m}
 }
 
-func expandCognitoUserPoolVerificationMessageTemplate(
-	config map[string]interface{},
-) *cognitoidentityprovider.VerificationMessageTemplateType {
+func expandCognitoUserPoolVerificationMessageTemplate(config map[string]interface{}) *cognitoidentityprovider.VerificationMessageTemplateType {
 	verificationMessageTemplateType := &cognitoidentityprovider.VerificationMessageTemplateType{}
 
 	if v, ok := config["default_email_option"]; ok && v.(string) != "" {
@@ -1944,9 +1841,7 @@ func expandCognitoUserPoolVerificationMessageTemplate(
 	return verificationMessageTemplateType
 }
 
-func flattenCognitoUserPoolVerificationMessageTemplate(
-	s *cognitoidentityprovider.VerificationMessageTemplateType,
-) []map[string]interface{} {
+func flattenCognitoUserPoolVerificationMessageTemplate(s *cognitoidentityprovider.VerificationMessageTemplateType) []map[string]interface{} {
 	m := map[string]interface{}{}
 
 	if s == nil {
@@ -1984,9 +1879,7 @@ func flattenCognitoUserPoolVerificationMessageTemplate(
 	return []map[string]interface{}{}
 }
 
-func flattenCognitoUserPoolDeviceConfiguration(
-	s *cognitoidentityprovider.DeviceConfigurationType,
-) []map[string]interface{} {
+func flattenCognitoUserPoolDeviceConfiguration(s *cognitoidentityprovider.DeviceConfigurationType) []map[string]interface{} {
 	config := map[string]interface{}{}
 
 	if s == nil {
@@ -2270,9 +2163,7 @@ func UserPoolSchemaAttributeMatchesStandardAttribute(input *cognitoidentityprovi
 	return false
 }
 
-func expandCognitoUserPoolCustomSMSSender(
-	config map[string]interface{},
-) *cognitoidentityprovider.CustomSMSLambdaVersionConfigType {
+func expandCognitoUserPoolCustomSMSSender(config map[string]interface{}) *cognitoidentityprovider.CustomSMSLambdaVersionConfigType {
 	usernameConfigurationType := &cognitoidentityprovider.CustomSMSLambdaVersionConfigType{
 		LambdaArn:     aws.String(config["lambda_arn"].(string)),
 		LambdaVersion: aws.String(config["lambda_version"].(string)),
@@ -2281,9 +2172,7 @@ func expandCognitoUserPoolCustomSMSSender(
 	return usernameConfigurationType
 }
 
-func flattenCognitoUserPoolCustomSMSSender(
-	u *cognitoidentityprovider.CustomSMSLambdaVersionConfigType,
-) []map[string]interface{} {
+func flattenCognitoUserPoolCustomSMSSender(u *cognitoidentityprovider.CustomSMSLambdaVersionConfigType) []map[string]interface{} {
 	m := map[string]interface{}{}
 
 	if u == nil {
@@ -2296,9 +2185,7 @@ func flattenCognitoUserPoolCustomSMSSender(
 	return []map[string]interface{}{m}
 }
 
-func expandCognitoUserPoolCustomEmailSender(
-	config map[string]interface{},
-) *cognitoidentityprovider.CustomEmailLambdaVersionConfigType {
+func expandCognitoUserPoolCustomEmailSender(config map[string]interface{}) *cognitoidentityprovider.CustomEmailLambdaVersionConfigType {
 	usernameConfigurationType := &cognitoidentityprovider.CustomEmailLambdaVersionConfigType{
 		LambdaArn:     aws.String(config["lambda_arn"].(string)),
 		LambdaVersion: aws.String(config["lambda_version"].(string)),
@@ -2307,9 +2194,7 @@ func expandCognitoUserPoolCustomEmailSender(
 	return usernameConfigurationType
 }
 
-func flattenCognitoUserPoolCustomEmailSender(
-	u *cognitoidentityprovider.CustomEmailLambdaVersionConfigType,
-) []map[string]interface{} {
+func flattenCognitoUserPoolCustomEmailSender(u *cognitoidentityprovider.CustomEmailLambdaVersionConfigType) []map[string]interface{} {
 	m := map[string]interface{}{}
 
 	if u == nil {
