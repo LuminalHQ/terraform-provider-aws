@@ -3,6 +3,7 @@ package s3
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -159,6 +160,11 @@ func resourceBucketMetricRead(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Reading S3 Bucket Metrics Configuration: %s", input)
 	output, err := conn.GetBucketMetricsConfiguration(input)
+
+	// RM-4400 - more descriptive 403 errors
+	if tfawserr.ErrStatusCodeEquals(err, http.StatusForbidden) {
+		log.Printf("permissions error on S3 Bucket (%s) while getting metrics configuration: %s", d.Id(), err)
+	}
 
 	if !d.IsNewResource() && tfawserr.ErrCodeEquals(err, s3.ErrCodeNoSuchBucket) {
 		log.Printf("[WARN] S3 Bucket Metrics Configuration (%s) not found, removing from state", d.Id())

@@ -3,6 +3,7 @@ package s3
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 	"time"
 
@@ -191,6 +192,11 @@ func resourceBucketAnalyticsConfigurationRead(d *schema.ResourceData, meta inter
 
 	log.Printf("[DEBUG] Reading S3 bucket analytics configuration: %s", input)
 	output, err := conn.GetBucketAnalyticsConfiguration(input)
+
+	// RM-4400 - more descriptive 403 errors
+	if tfawserr.ErrStatusCodeEquals(err, http.StatusForbidden) {
+		log.Printf("permissions error on S3 Bucket (%s) while getting analytics configuration: %s", d.Id(), err)
+	}
 
 	if !d.IsNewResource() && tfawserr.ErrCodeEquals(err, s3.ErrCodeNoSuchBucket) {
 		log.Printf("[WARN] S3 Bucket Analytics Configuration (%s) not found, removing from state", d.Id())

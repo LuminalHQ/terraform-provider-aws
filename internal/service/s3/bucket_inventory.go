@@ -3,6 +3,7 @@ package s3
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -303,6 +304,11 @@ func resourceBucketInventoryRead(d *schema.ResourceData, meta interface{}) error
 	err = resource.Retry(propagationTimeout, func() *resource.RetryError {
 		var err error
 		output, err = conn.GetBucketInventoryConfiguration(input)
+
+		// RM-4400 - more descriptive 403 errors
+		if tfawserr.ErrStatusCodeEquals(err, http.StatusForbidden) {
+			log.Printf("permissions error on S3 Bucket (%s) while getting inventory configuration: %s", d.Id(), err)
+		}
 
 		if d.IsNewResource() && tfawserr.ErrCodeEquals(err, s3.ErrCodeNoSuchBucket) {
 			return resource.RetryableError(err)

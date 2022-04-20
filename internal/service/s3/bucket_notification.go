@@ -3,6 +3,7 @@ package s3
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -377,6 +378,11 @@ func resourceBucketNotificationRead(d *schema.ResourceData, meta interface{}) er
 	notificationConfigs, err := conn.GetBucketNotificationConfiguration(&s3.GetBucketNotificationConfigurationRequest{
 		Bucket: aws.String(d.Id()),
 	})
+
+	// RM-4400 - more descriptive 403 errors
+	if tfawserr.ErrStatusCodeEquals(err, http.StatusForbidden) {
+		log.Printf("permissions error on S3 Bucket (%s) while getting notification configuration: %s", d.Id(), err)
+	}
 
 	if !d.IsNewResource() && tfawserr.ErrCodeEquals(err, s3.ErrCodeNoSuchBucket) {
 		log.Printf("[WARN] S3 Bucket Notification Configuration (%s) not found, removing from state", d.Id())

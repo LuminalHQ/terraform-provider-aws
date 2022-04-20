@@ -58,6 +58,31 @@ func ResourceInstance() *schema.Resource {
 				Optional:     true,
 				AtLeastOneOf: []string{"ami", "launch_template"},
 			},
+
+			// Snyk: custom attributes begin
+
+			"ami_owner_id": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+
+			"ami_creation_date": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+
+			"ami_platform_details": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+
+			"launch_time": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+
+			// Snyk: custom attributes end
+
 			"arn": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -989,6 +1014,13 @@ func resourceInstanceRead(d *schema.ResourceData, meta interface{}) error {
 		d.Set("iam_instance_profile", nil)
 	}
 
+	if err := readImageAttributes(d, conn); err != nil {
+		return err
+	}
+	if instance.LaunchTime != nil {
+		d.Set("launch_time", instance.LaunchTime.Format(time.RFC3339))
+	}
+
 	{
 		launchTemplate, err := getInstanceLaunchTemplate(conn, d)
 		if err != nil {
@@ -1755,6 +1787,55 @@ func resourceInstanceDelete(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
+func readImageAttributes(d *schema.ResourceData, conn *ec2.EC2) error {
+
+	imageID := d.Get("ami").(string)
+	var image *ec2.Image
+
+	err := resource.Retry(1*time.Minute, func() *resource.RetryError {
+		res, err := conn.DescribeImages(&ec2.DescribeImagesInput{
+			ImageIds: []*string{aws.String(imageID)},
+		})
+		if isResourceTimeoutError(err) {
+			return resource.RetryableError(err)
+		}
+		if tfawserr.ErrCodeEquals(err, "InvalidAMIID.Unavailable") || tfawserr.ErrCodeEquals(err, "InvalidAMIID.NotFound") {
+			return nil
+		}
+		if err != nil {
+			return resource.NonRetryableError(err)
+		}
+		if len(res.Images) == 0 {
+			return nil
+		}
+		image = res.Images[0]
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("Unable to describe AMI after retries: %s", err)
+	}
+	// Don't fail the refresh if the AMI was not found
+	if image == nil {
+		return nil
+	}
+
+	if image.OwnerId != nil {
+		d.Set("ami_owner_id", image.OwnerId)
+	}
+	if image.PlatformDetails != nil {
+		d.Set("ami_platform_details", image.PlatformDetails)
+	}
+	if image.CreationDate != nil {
+		d.Set("ami_creation_date", image.CreationDate)
+	}
+	return nil
+}
+
+func isResourceTimeoutError(err error) bool {
+	timeoutErr, ok := err.(*resource.TimeoutError)
+	return ok && timeoutErr.LastError == nil
+}
+
 func resourceInstanceDisableAPITermination(conn *ec2.EC2, id string, disableAPITermination bool) error {
 	// false = enable api termination
 	// true = disable api termination (protected)
@@ -2074,6 +2155,10 @@ func readBlockDevicesFromInstance(d *schema.ResourceData, instance *ec2.Instance
 		VolumeIds: volIDs,
 	})
 	if err != nil {
+		if tfawserr.ErrMessageContains(err, "InvalidVolume.NotFound", "does not exist") {
+			log.Print("[WARN] Unable to describe volumes attached to instance")
+			return blockDevices, nil
+		}
 		return nil, err
 	}
 
@@ -2203,6 +2288,9 @@ func FetchRootDeviceName(ami string, conn *ec2.EC2) (*string, error) {
 	res, err := conn.DescribeImages(&ec2.DescribeImagesInput{
 		ImageIds: []*string{aws.String(ami)},
 	})
+	if tfawserr.ErrCodeEquals(err, "InvalidAMIID.Unavailable") || tfawserr.ErrCodeEquals(err, "InvalidAMIID.NotFound") {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

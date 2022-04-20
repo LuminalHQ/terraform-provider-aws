@@ -1180,7 +1180,8 @@ func resourceClusterRead(d *schema.ResourceData, meta interface{}) error {
 		// Ignore the following API error for regions/partitions that do not support RDS Global Clusters:
 		// InvalidParameterValue: Access Denied to API Version: APIGlobalDatabases
 		if err != nil && !tfawserr.ErrMessageContains(err, "InvalidParameterValue", "Access Denied to API Version: APIGlobalDatabases") {
-			return fmt.Errorf("error reading RDS Global Cluster information for DB Cluster (%s): %s", d.Id(), err)
+			// Gracefully handle lack of permissions
+			log.Printf("error reading RDS Global Cluster information for DB Cluster (%s): %s", d.Id(), err)
 		}
 
 		if globalCluster != nil {
