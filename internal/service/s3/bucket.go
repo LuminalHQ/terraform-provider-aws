@@ -896,12 +896,8 @@ func resourceBucketRead(ctx context.Context, d *schema.ResourceData, meta interf
 	}
 
 	// RM-4400 - more descriptive 403 errors
-	if err != nil && !tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusForbidden) {
+	if tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusForbidden) {
 		return sdkdiag.AppendErrorf(diags, "permissions error on S3 Bucket (%s) while getting CORS configuration: %s", d.Id(), err)
-	}
-
-	if err != nil && !tfawserr.ErrCodeEquals(err, errCodeNoSuchCORSConfiguration, errCodeNotImplemented, errCodeXNotImplemented) {
-		return sdkdiag.AppendErrorf(diags, "getting S3 Bucket CORS configuration: %s", err)
 	}
 
 	switch {
