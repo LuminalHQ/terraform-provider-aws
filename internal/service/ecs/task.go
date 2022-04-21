@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-provider-aws/internal/conns"
 )
 
-func resourceAwsEcsTask() *schema.Resource {
+func ResourceTask() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceAwsEcsTaskUpdate,
 		Read:   resourceAwsEcsTaskRead,
