@@ -40,6 +40,14 @@ func (p *servicePackage) SDKDataSources(ctx context.Context) []*types.ServicePac
 			TypeName: "aws_ecs_service",
 		},
 		{
+			Factory:  ResourceTask,
+			TypeName: "aws_ecs_task",
+			Name:     "Task",
+			Tags: &types.ServicePackageResourceTags{
+				IdentifierAttribute: "arn",
+			},
+		},
+		{
 			Factory:  DataSourceTaskDefinition,
 			TypeName: "aws_ecs_task_definition",
 		},

@@ -35,6 +35,11 @@ func (p *servicePackage) SDKDataSources(ctx context.Context) []*types.ServicePac
 			Name:     "Account Alias",
 		},
 		{
+			Factory:  ResourceCredentialReport,
+			TypeName: "aws_iam_credential_report",
+			Name:     "Credential Report",
+		},
+		{
 			Factory:  dataSourceGroup,
 			TypeName: "aws_iam_group",
 			Name:     "Group",
