@@ -1329,6 +1329,7 @@ func Provider() *schema.Provider {
 			"aws_ecs_cluster_capacity_providers": ecs.ResourceClusterCapacityProviders(),
 			"aws_ecs_service":                    ecs.ResourceService(),
 			"aws_ecs_tag":                        ecs.ResourceTag(),
+			"aws_ecs_task":                       ecs.ResourceTask(),
 			"aws_ecs_task_definition":            ecs.ResourceTaskDefinition(),
 			"aws_ecs_task_set":                   ecs.ResourceTaskSet(),
 
@@ -1463,6 +1464,7 @@ func Provider() *schema.Provider {
 			"aws_iam_access_key":                  iam.ResourceAccessKey(),
 			"aws_iam_account_alias":               iam.ResourceAccountAlias(),
 			"aws_iam_account_password_policy":     iam.ResourceAccountPasswordPolicy(),
+			"aws_iam_credential_report":           iam.ResourceCredentialReport(),
 			"aws_iam_group":                       iam.ResourceGroup(),
 			"aws_iam_group_membership":            iam.ResourceGroupMembership(),
 			"aws_iam_group_policy":                iam.ResourceGroupPolicy(),
