@@ -130,6 +130,11 @@ func (p *servicePackage) SDKResources(ctx context.Context) []*types.ServicePacka
 			Name:     "Account Password Policy",
 		},
 		{
+			Factory:  ResourceCredentialReport,
+			TypeName: "aws_iam_credential_report",
+			Name:     "Credential Report",
+		},
+		{
 			Factory:  resourceGroup,
 			TypeName: "aws_iam_group",
 			Name:     "Group",
