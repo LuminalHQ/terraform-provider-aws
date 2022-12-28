@@ -469,3 +469,50 @@ type LambdaPolicyStatement struct {
 	Principal map[string]string
 	Sid       string
 }
+
+// Serialize then re-parse a field to correct signatures of non-trivial types (i.e., maps)
+func reParseField(input, output interface{}) error {
+	data, err := json.Marshal(input)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(data, output)
+}
+
+func (stmt *LambdaPolicyStatement) UnmarshalJSON(data []byte) error {
+	// Principal can be either a map[string]string or "*".  Unfortunately Go's
+	// built-in JSON support (understandably) doesn't really handle "either"
+	// very well, hence the custom unmarshaller.
+	//
+	// According to
+	// https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_principal.html,
+	// "*" is equivalent to {"AWS":"*"}, so we'll transform it to that.
+
+	var raw map[string]interface{}
+	err := json.Unmarshal(data, &raw)
+	if err != nil {
+		return err
+	}
+
+	reParseField(raw["Condition"], &stmt.Condition)
+	stmt.Action = raw["Action"].(string)
+	stmt.Resource = raw["Resource"].(string)
+	stmt.Effect = raw["Effect"].(string)
+	stmt.Sid = raw["Sid"].(string)
+
+	switch val := raw["Principal"].(type) {
+	case string:
+		if val != "*" {
+			return fmt.Errorf("unexpected principal value")
+		}
+
+		stmt.Principal = map[string]string{
+			"AWS": "*",
+		}
+	default:
+		reParseField(raw["Principal"], &stmt.Principal)
+	}
+
+	return nil
+}
