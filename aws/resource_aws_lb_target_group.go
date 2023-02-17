@@ -752,9 +752,13 @@ func resourceAwsLbTargetGroupCustomizeDiff(diff *schema.ResourceDiff, v interfac
 				// LB and is a first run
 				return fmt.Errorf("%s: health_check.timeout is not supported for target_groups with TCP protocol", diff.Id())
 			}
-			if healthCheck["healthy_threshold"].(int) != healthCheck["unhealthy_threshold"].(int) {
-				return fmt.Errorf("%s: health_check.healthy_threshold %d and health_check.unhealthy_threshold %d must be the same for target_groups with TCP protocol", diff.Id(), healthCheck["healthy_threshold"].(int), healthCheck["unhealthy_threshold"].(int))
-			}
+			// NOTE (jaspervdj): This is breaking drift (CLOUD-1225) for some
+			// configurations in AWS which do have separate values.  Since it is
+			// only an ahead-of-time validation before AWS validates it again,
+			// this is safe to disable.
+			// if healthCheck["healthy_threshold"].(int) != healthCheck["unhealthy_threshold"].(int) {
+			// 	return fmt.Errorf("%s: health_check.healthy_threshold %d and health_check.unhealthy_threshold %d must be the same for target_groups with TCP protocol", diff.Id(), healthCheck["healthy_threshold"].(int), healthCheck["unhealthy_threshold"].(int))
+			// }
 		}
 	}
 
