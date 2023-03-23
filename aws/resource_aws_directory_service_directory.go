@@ -500,7 +500,7 @@ func resourceAwsDirectoryServiceDirectoryRead(d *schema.ResourceData, meta inter
 
 	if aws.StringValue(dir.Type) == directoryservice.DirectoryTypeAdconnector {
 		d.Set("security_group_id", aws.StringValue(dir.ConnectSettings.SecurityGroupId))
-	} else {
+	} else if dir.VpcSettings != nil { // CLOUD-1305
 		d.Set("security_group_id", aws.StringValue(dir.VpcSettings.SecurityGroupId))
 	}
 
