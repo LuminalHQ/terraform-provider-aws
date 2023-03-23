@@ -302,7 +302,9 @@ func resourceAwsCloudFormationStackRead(d *schema.ResourceData, meta interface{}
 
 	template, err := normalizeCloudFormationTemplate(*out.TemplateBody)
 	if err != nil {
-		return fmt.Errorf("template body contains an invalid JSON or YAML: %s", err)
+		// CLOUD-1305
+		template = *out.TemplateBody
+		// return fmt.Errorf("template body contains an invalid JSON or YAML: %s", err)
 	}
 	d.Set("template_body", template)
 
