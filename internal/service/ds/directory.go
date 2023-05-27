@@ -494,7 +494,14 @@ func resourceDirectoryRead(d *schema.ResourceData, meta interface{}) error {
 	if aws.StringValue(dir.Type) == directoryservice.DirectoryTypeAdconnector {
 		d.Set("security_group_id", dir.ConnectSettings.SecurityGroupId)
 	} else {
-		d.Set("security_group_id", dir.VpcSettings.SecurityGroupId)
+		/* CLOUD-1547: we encountered environments where VpcSettings was nil.
+		 * In this case, `ConnectSettings.SecurityGroupId` _was_ set, so in
+		 * order to read the attribute we just try both but check for nil first. */
+		if dir.VpcSettings != nil {
+			d.Set("security_group_id", dir.VpcSettings.SecurityGroupId)
+		} else if dir.ConnectSettings != nil {
+			d.Set("security_group_id", dir.ConnectSettings.SecurityGroupId)
+		}
 	}
 
 	tags, err := ListTags(conn, d.Id())
