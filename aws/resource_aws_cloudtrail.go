@@ -381,7 +381,7 @@ func resourceAwsCloudTrailRead(d *schema.ResourceData, meta interface{}) error {
 	// you're looking for is not found. Instead, it's simply not in the list.
 	var trail *cloudtrail.Trail
 	for _, c := range resp.TrailList {
-		if d.Id() == *c.Name {
+		if id := d.Id(); id == *c.Name || id == *c.TrailARN {
 			trail = c
 		}
 	}
@@ -414,16 +414,16 @@ func resourceAwsCloudTrailRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("home_region", trail.HomeRegion)
 
 	tags, err := keyvaluetags.CloudtrailListTags(conn, *trail.TrailARN)
-
 	if err != nil {
-		return fmt.Errorf("error listing tags for Cloudtrail (%s): %s", *trail.TrailARN, err)
+		// CLOUD-1544: This can happen for organizational trails, so we want to treat this
+		// as non-fatal.
+		log.Printf("[WARN] error listing tags for Cloudtrail (%s): %s", *trail.TrailARN, err)
 	}
-
 	if err := d.Set("tags", tags.IgnoreAws().IgnoreConfig(ignoreTagsConfig).Map()); err != nil {
 		return fmt.Errorf("error setting tags: %s", err)
 	}
 
-	logstatus, err := cloudTrailGetLoggingStatus(conn, trail.Name)
+	logstatus, err := cloudTrailGetLoggingStatus(conn, d.Id())
 	if err != nil {
 		return err
 	}
@@ -579,13 +579,13 @@ func resourceAwsCloudTrailDelete(d *schema.ResourceData, meta interface{}) error
 	return err
 }
 
-func cloudTrailGetLoggingStatus(conn *cloudtrail.CloudTrail, id *string) (bool, error) {
+func cloudTrailGetLoggingStatus(conn *cloudtrail.CloudTrail, id string) (bool, error) {
 	GetTrailStatusOpts := &cloudtrail.GetTrailStatusInput{
-		Name: id,
+		Name: &id,
 	}
 	resp, err := conn.GetTrailStatus(GetTrailStatusOpts)
 	if err != nil {
-		return false, fmt.Errorf("Error retrieving logging status of CloudTrail (%s): %s", *id, err)
+		return false, fmt.Errorf("Error retrieving logging status of CloudTrail (%s): %s", id, err)
 	}
 
 	return *resp.IsLogging, err
