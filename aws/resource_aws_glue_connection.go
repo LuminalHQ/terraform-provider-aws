@@ -126,8 +126,9 @@ func resourceAwsGlueConnectionRead(d *schema.ResourceData, meta interface{}) err
 	}
 
 	input := &glue.GetConnectionInput{
-		CatalogId: aws.String(catalogID),
-		Name:      aws.String(connectionName),
+		CatalogId:    aws.String(catalogID),
+		Name:         aws.String(connectionName),
+		HidePassword: aws.Bool(true), // CENTEX-736
 	}
 
 	log.Printf("[DEBUG] Reading Glue Connection: %s", input)
