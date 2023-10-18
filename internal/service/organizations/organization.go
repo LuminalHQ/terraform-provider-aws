@@ -240,67 +240,67 @@ func resourceOrganizationRead(ctx context.Context, d *schema.ResourceData, meta 
 		return sdkdiag.AppendErrorf(diags, "reading Organizations Organization (%s): %s", d.Id(), err)
 	}
 
-	accounts, err := findAccounts(ctx, conn, &organizations.ListAccountsInput{})
+	// accounts, err := findAccounts(ctx, conn, &organizations.ListAccountsInput{})
 
-	if err != nil {
-		return sdkdiag.AppendErrorf(diags, "reading Organizations Organization (%s) accounts: %s", d.Id(), err)
-	}
+	// if err != nil {
+	// 	return sdkdiag.AppendErrorf(diags, "reading Organizations Organization (%s) accounts: %s", d.Id(), err)
+	// }
 
-	managementAccountID := aws.ToString(org.MasterAccountId)
-	var managementAccountName *string
-	for _, v := range accounts {
-		if aws.ToString(v.Id) == managementAccountID {
-			managementAccountName = v.Name
-		}
-	}
-	nonManagementAccounts := tfslices.Filter(accounts, func(v awstypes.Account) bool {
-		return aws.ToString(v.Id) != managementAccountID
-	})
+	// managementAccountID := aws.ToString(org.MasterAccountId)
+	// var managementAccountName *string
+	// for _, v := range accounts {
+	// 	if aws.ToString(v.Id) == managementAccountID {
+	// 		managementAccountName = v.Name
+	// 	}
+	// }
+	// nonManagementAccounts := tfslices.Filter(accounts, func(v awstypes.Account) bool {
+	// 	return aws.ToString(v.Id) != managementAccountID
+	// })
 
-	roots, err := findRoots(ctx, conn, &organizations.ListRootsInput{})
+	// roots, err := findRoots(ctx, conn, &organizations.ListRootsInput{})
 
-	if err != nil {
-		return sdkdiag.AppendErrorf(diags, "reading Organizations Organization (%s) roots: %s", d.Id(), err)
-	}
+	// if err != nil {
+	// 	return sdkdiag.AppendErrorf(diags, "reading Organizations Organization (%s) roots: %s", d.Id(), err)
+	// }
 
-	if err := d.Set("accounts", flattenAccounts(accounts)); err != nil {
-		return sdkdiag.AppendErrorf(diags, "setting accounts: %s", err)
-	}
+	// if err := d.Set("accounts", flattenAccounts(accounts)); err != nil {
+	// 	return sdkdiag.AppendErrorf(diags, "setting accounts: %s", err)
+	// }
 	d.Set(names.AttrARN, org.Arn)
 	d.Set("feature_set", org.FeatureSet)
 	d.Set("master_account_arn", org.MasterAccountArn)
 	d.Set("master_account_email", org.MasterAccountEmail)
 	d.Set("master_account_id", org.MasterAccountId)
-	d.Set("master_account_name", managementAccountName)
-	if err := d.Set("non_master_accounts", flattenAccounts(nonManagementAccounts)); err != nil {
-		return sdkdiag.AppendErrorf(diags, "setting non_master_accounts: %s", err)
-	}
-	if err := d.Set("roots", flattenRoots(roots)); err != nil {
-		return sdkdiag.AppendErrorf(diags, "setting roots: %s", err)
-	}
+	// d.Set("master_account_name", managementAccountName)
+	// if err := d.Set("non_master_accounts", flattenAccounts(nonManagementAccounts)); err != nil {
+	// 	return sdkdiag.AppendErrorf(diags, "setting non_master_accounts: %s", err)
+	// }
+	// if err := d.Set("roots", flattenRoots(roots)); err != nil {
+	// 	return sdkdiag.AppendErrorf(diags, "setting roots: %s", err)
+	// }
 
-	var awsServiceAccessPrincipals []string
+	// var awsServiceAccessPrincipals []string
 
 	// ConstraintViolationException: The request failed because the organization does not have all features enabled. Please enable all features in your organization and then retry.
-	if org.FeatureSet == awstypes.OrganizationFeatureSetAll {
-		awsServiceAccessPrincipals, err = findEnabledServicePrincipalNames(ctx, conn)
+	// if org.FeatureSet == awstypes.OrganizationFeatureSetAll {
+	// 	awsServiceAccessPrincipals, err = findEnabledServicePrincipalNames(ctx, conn)
 
-		if err != nil {
-			return sdkdiag.AppendErrorf(diags, "reading Organizations Organization (%s) service principals: %s", d.Id(), err)
-		}
-	}
+	// 	if err != nil {
+	// 		return sdkdiag.AppendErrorf(diags, "reading Organizations Organization (%s) service principals: %s", d.Id(), err)
+	// 	}
+	// }
 
-	d.Set("aws_service_access_principals", awsServiceAccessPrincipals)
+	// d.Set("aws_service_access_principals", awsServiceAccessPrincipals)
 
-	var enabledPolicyTypes []awstypes.PolicyType
+	// var enabledPolicyTypes []awstypes.PolicyType
 
-	for _, v := range roots[0].PolicyTypes {
-		if v.Status == awstypes.PolicyTypeStatusEnabled {
-			enabledPolicyTypes = append(enabledPolicyTypes, v.Type)
-		}
-	}
+	// for _, v := range roots[0].PolicyTypes {
+	// 	if v.Status == awstypes.PolicyTypeStatusEnabled {
+	// 		enabledPolicyTypes = append(enabledPolicyTypes, v.Type)
+	// 	}
+	// }
 
-	d.Set("enabled_policy_types", enabledPolicyTypes)
+	// d.Set("enabled_policy_types", enabledPolicyTypes)
 
 	return diags
 }

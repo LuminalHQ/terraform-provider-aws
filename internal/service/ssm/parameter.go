@@ -220,7 +220,7 @@ func resourceParameterRead(ctx context.Context, d *schema.ResourceData, meta int
 	)
 	outputRaw, err := tfresource.RetryWhen(ctx, timeout,
 		func() (interface{}, error) {
-			return findParameterByName(ctx, conn, d.Id(), true)
+			return findParameterByName(ctx, conn, d.Id(), false)
 		},
 		func(err error) (bool, error) {
 			if d.IsNewResource() && tfresource.NotFound(err) && d.Get("data_type").(string) == "aws:ec2:image" {
