@@ -135,7 +135,9 @@ func resourceAlternateContactRead(ctx context.Context, d *schema.ResourceData, m
 		return sdkdiag.AppendFromErr(diags, err)
 	}
 
-	output, err := findAlternateContactByTwoPartKey(ctx, conn, accountID, contactType)
+	// AccountID is replaced by empty string because it must be a member account in the org if used
+	// See https://docs.aws.amazon.com/accounts/latest/reference/API_GetAlternateContact.html#API_GetAlternateContact_RequestSyntax
+	output, err := findAlternateContactByTwoPartKey(ctx, conn, "", contactType)
 
 	if !d.IsNewResource() && tfresource.NotFound(err) {
 		log.Printf("[WARN] Account Alternate Contact (%s) not found, removing from state", d.Id())

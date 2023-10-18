@@ -2092,15 +2092,21 @@ func hashRootBlockDevice(v interface{}) int {
 func hashLaunchSpecification(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
-	buf.WriteString(fmt.Sprintf("%s-", m["ami"].(string)))
-	if v, ok := m["availability_zone"].(string); ok && v != "" {
-		buf.WriteString(fmt.Sprintf("%s-", v))
+	if _, ok := m["ami"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", m["ami"].(string)))
 	}
-	if v, ok := m["subnet_id"].(string); ok && v != "" {
-		buf.WriteString(fmt.Sprintf("%s-", v))
+	if _, ok := m["availability_zone"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", m["availability_zone"].(string)))
 	}
-	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
-	buf.WriteString(fmt.Sprintf("%s-", m["spot_price"].(string)))
+	if _, ok := m["subnet_id"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", m["subnet_id"].(string)))
+	}
+	if _, ok := m["instance_type"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
+	}
+	if _, ok := m["spot_price"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", m["spot_price"].(string)))
+	}
 	return create.StringHashcode(buf.String())
 }
 

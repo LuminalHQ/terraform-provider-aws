@@ -706,10 +706,11 @@ func expandEventSelectorDataResource(configured []interface{}) []types.DataResou
 func flattenEventSelector(configured []types.EventSelector) []map[string]interface{} {
 	eventSelectors := make([]map[string]interface{}, 0, len(configured))
 
+	// We want to output all the selectors (note for advanced event selectors this is empty)
 	// Prevent default configurations shows differences
-	if len(configured) == 1 && len(configured[0].DataResources) == 0 && configured[0].ReadWriteType == types.ReadWriteTypeAll && len(configured[0].ExcludeManagementEventSources) == 0 {
-		return eventSelectors
-	}
+	// if len(configured) == 1 && len(configured[0].DataResources) == 0 && configured[0].ReadWriteType == types.ReadWriteTypeAll && len(configured[0].ExcludeManagementEventSources) == 0 {
+	// 	return eventSelectors
+	// }
 
 	for _, raw := range configured {
 		item := make(map[string]interface{})

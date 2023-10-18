@@ -161,6 +161,10 @@ func ResourceVPC() *schema.Resource {
 				ConflictsWith: []string{"ipv6_cidr_block"},
 				RequiredWith:  []string{"ipv6_ipam_pool_id"},
 			},
+			"is_default": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
 			"main_route_table_id": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -287,6 +291,7 @@ func resourceVPCRead(ctx context.Context, d *schema.ResourceData, meta interface
 	d.Set("dhcp_options_id", vpc.DhcpOptionsId)
 	d.Set("instance_tenancy", vpc.InstanceTenancy)
 	d.Set("owner_id", ownerID)
+	d.Set("is_default", vpc.IsDefault)
 
 	if v, err := tfresource.RetryWhenNewResourceNotFound(ctx, ec2PropagationTimeout, func() (interface{}, error) {
 		return findVPCAttributeV2(ctx, conn, d.Id(), types.VpcAttributeNameEnableDnsHostnames)

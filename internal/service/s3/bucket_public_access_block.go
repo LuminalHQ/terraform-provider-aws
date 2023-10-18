@@ -6,6 +6,7 @@ package s3
 import (
 	"context"
 	"log"
+	"net/http"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -193,6 +194,11 @@ func findPublicAccessBlockConfiguration(ctx context.Context, conn *s3.Client, bu
 	}
 
 	output, err := conn.GetPublicAccessBlock(ctx, input)
+
+	// RM-4400 - more descriptive 403 errors
+	if tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusForbidden) {
+		log.Printf("permissions error on S3 Bucket (%s) while getting public access block configuration: %s", bucket, err)
+	}
 
 	if tfawserr.ErrCodeEquals(err, errCodeNoSuchBucket, errCodeNoSuchPublicAccessBlockConfiguration) {
 		return nil, &retry.NotFoundError{

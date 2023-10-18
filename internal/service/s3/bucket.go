@@ -814,6 +814,11 @@ func resourceBucketRead(ctx context.Context, d *schema.ResourceData, meta interf
 		return findBucketPolicy(ctx, conn, d.Id())
 	})
 
+	// RM-4400 - more descriptive 403 errors
+	if tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusForbidden) {
+		log.Printf("permissions error on S3 Bucket (%s) while getting encryption configuration: %s", d.Id(), err)
+	}
+
 	// The call to HeadBucket above can occasionally return no error (i.e. NoSuchBucket)
 	// after a bucket has been deleted (eventual consistency woes :/), thus, when making extra S3 API calls
 	// such as GetBucketPolicy, the error should be caught for non-new buckets as follows.
@@ -844,6 +849,14 @@ func resourceBucketRead(ctx context.Context, d *schema.ResourceData, meta interf
 		return findBucketACL(ctx, conn, d.Id(), "")
 	})
 
+	// RM-4400 - more descriptive 403 errors
+	if tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusForbidden) {
+		log.Printf("[WARN] permissions error on S3 Bucket (%s) while getting grant ACL configuration: %s", d.Id(), err)
+	}
+
+	// The S3 API method calls above can occasionally return no error (i.e. NoSuchBucket)
+	// after a bucket has been deleted (eventual consistency woes :/), thus, when making extra S3 API calls
+	// such as GetBucketAcl, the error should be caught for non-new buckets as follows.
 	if !d.IsNewResource() && tfawserr.ErrCodeEquals(err, errCodeNoSuchBucket) {
 		log.Printf("[WARN] S3 Bucket (%s) not found, removing from state", d.Id())
 		d.SetId("")
@@ -868,10 +881,27 @@ func resourceBucketRead(ctx context.Context, d *schema.ResourceData, meta interf
 		return findCORSRules(ctx, conn, d.Id(), "")
 	})
 
+	// RM-4400 - more descriptive 403 errors
+	if tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusForbidden) {
+		log.Printf("[WARN] permissions error on S3 Bucket (%s) while getting CORS configuration: %s", d.Id(), err)
+	}
+
+	// The S3 API method calls above can occasionally return no error (i.e. NoSuchBucket)
+	// after a bucket has been deleted (eventual consistency woes :/), thus, when making extra S3 API calls
+	// such as GetBucketCors, the error should be caught for non-new buckets as follows.
 	if !d.IsNewResource() && tfawserr.ErrCodeEquals(err, errCodeNoSuchBucket) {
 		log.Printf("[WARN] S3 Bucket (%s) not found, removing from state", d.Id())
 		d.SetId("")
 		return diags
+	}
+
+	// RM-4400 - more descriptive 403 errors
+	if err != nil && !tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusForbidden) {
+		return sdkdiag.AppendErrorf(diags, "permissions error on S3 Bucket (%s) while getting CORS configuration: %s", d.Id(), err)
+	}
+
+	if err != nil && !tfawserr.ErrCodeEquals(err, errCodeNoSuchCORSConfiguration, errCodeNotImplemented, errCodeXNotImplemented) {
+		return sdkdiag.AppendErrorf(diags, "getting S3 Bucket CORS configuration: %s", err)
 	}
 
 	switch {
@@ -897,7 +927,10 @@ func resourceBucketRead(ctx context.Context, d *schema.ResourceData, meta interf
 		d.SetId("")
 		return diags
 	}
-
+	// RM-4400 - more descriptive 403 errors
+	if tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusForbidden) {
+		log.Printf("[WARN] permissions error on S3 Bucket (%s) while getting website endpoint: %s", d.Id(), err)
+	}
 	switch {
 	case err == nil:
 		website, err := flattenBucketWebsite(bucketWebsite)
@@ -920,6 +953,14 @@ func resourceBucketRead(ctx context.Context, d *schema.ResourceData, meta interf
 		return findBucketVersioning(ctx, conn, d.Id(), "")
 	})
 
+	// RM-4400 - more descriptive 403 errors
+	if tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusForbidden) {
+		log.Printf("[WARN] permissions error on S3 Bucket (%s) while getting versioning configuration: %s", d.Id(), err)
+	}
+
+	// The S3 API method calls above can occasionally return no error (i.e. NoSuchBucket)
+	// after a bucket has been deleted (eventual consistency woes :/), thus, when making extra S3 API calls
+	// such as GetBucketVersioning, the error should be caught for non-new buckets as follows.
 	if !d.IsNewResource() && tfawserr.ErrCodeEquals(err, errCodeNoSuchBucket) {
 		log.Printf("[WARN] S3 Bucket (%s) not found, removing from state", d.Id())
 		d.SetId("")
@@ -944,6 +985,14 @@ func resourceBucketRead(ctx context.Context, d *schema.ResourceData, meta interf
 		return findBucketAccelerateConfiguration(ctx, conn, d.Id(), "")
 	})
 
+	// RM-4400 - more descriptive 403 errors
+	if tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusForbidden) {
+		log.Printf("[WARN] permissions error on S3 Bucket (%s) while getting acceleration status configuration: %s", d.Id(), err)
+	}
+
+	// The S3 API method calls above can occasionally return no error (i.e. NoSuchBucket)
+	// after a bucket has been deleted (eventual consistency woes :/), thus, when making extra S3 API calls
+	// such as GetBucketAccelerateConfiguration, the error should be caught for non-new buckets as follows.
 	if !d.IsNewResource() && tfawserr.ErrCodeEquals(err, errCodeNoSuchBucket) {
 		log.Printf("[WARN] S3 Bucket (%s) not found, removing from state", d.Id())
 		d.SetId("")
@@ -955,6 +1004,8 @@ func resourceBucketRead(ctx context.Context, d *schema.ResourceData, meta interf
 		d.Set("acceleration_status", bucketAccelerate.Status)
 	case tfresource.NotFound(err), tfawserr.ErrCodeEquals(err, errCodeMethodNotAllowed, errCodeNotImplemented, errCodeXNotImplemented, errCodeUnsupportedArgument):
 		d.Set("acceleration_status", nil)
+	case tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusForbidden):
+		return diag.Errorf("permissions error on S3 Bucket (%s) while getting acceleration status configuration: %s", d.Id(), err)
 	default:
 		return diag.Errorf("reading S3 Bucket (%s) accelerate configuration: %s", d.Id(), err)
 	}
@@ -966,6 +1017,14 @@ func resourceBucketRead(ctx context.Context, d *schema.ResourceData, meta interf
 		return findBucketRequestPayment(ctx, conn, d.Id(), "")
 	})
 
+	// RM-4400 - more descriptive 403 errors
+	if tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusForbidden) {
+		log.Printf("[WARN] permissions error on S3 Bucket (%s) while getting request payer configuration: %s", d.Id(), err)
+	}
+
+	// The S3 API method calls above can occasionally return no error (i.e. NoSuchBucket)
+	// after a bucket has been deleted (eventual consistency woes :/), thus, when making extra S3 API calls
+	// such as GetBucketRequestPayment, the error should be caught for non-new buckets as follows.
 	if !d.IsNewResource() && tfawserr.ErrCodeEquals(err, errCodeNoSuchBucket) {
 		log.Printf("[WARN] S3 Bucket (%s) not found, removing from state", d.Id())
 		d.SetId("")
@@ -988,6 +1047,14 @@ func resourceBucketRead(ctx context.Context, d *schema.ResourceData, meta interf
 		return findLoggingEnabled(ctx, conn, d.Id(), "")
 	})
 
+	// RM-4400 - more descriptive 403 errors
+	if tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusForbidden) {
+		log.Printf("[WARN] permissions error on S3 Bucket (%s) while getting logging configuration: %s", d.Id(), err)
+	}
+
+	// The S3 API method calls above can occasionally return no error (i.e. NoSuchBucket)
+	// after a bucket has been deleted (eventual consistency woes :/), thus, when making extra S3 API calls
+	// such as GetBucketLogging, the error should be caught for non-new buckets as follows.
 	if !d.IsNewResource() && tfawserr.ErrCodeEquals(err, errCodeNoSuchBucket) {
 		log.Printf("[WARN] S3 Bucket (%s) not found, removing from state", d.Id())
 		d.SetId("")
@@ -1012,6 +1079,14 @@ func resourceBucketRead(ctx context.Context, d *schema.ResourceData, meta interf
 		return findLifecycleRules(ctx, conn, d.Id(), "")
 	})
 
+	// RM-4400 - more descriptive 403 errors
+	if tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusForbidden) {
+		log.Printf("[WARN] permissions error on S3 Bucket (%s) while getting lifecycle configuration: %s", d.Id(), err)
+	}
+
+	// The S3 API method calls above can occasionally return no error (i.e. NoSuchBucket)
+	// after a bucket has been deleted (eventual consistency woes :/), thus, when making extra S3 API calls
+	// such as GetBucketLifecycleConfiguration, the error should be caught for non-new buckets as follows.
 	if !d.IsNewResource() && tfawserr.ErrCodeEquals(err, errCodeNoSuchBucket) {
 		log.Printf("[WARN] S3 Bucket (%s) not found, removing from state", d.Id())
 		d.SetId("")
@@ -1036,6 +1111,14 @@ func resourceBucketRead(ctx context.Context, d *schema.ResourceData, meta interf
 		return findReplicationConfiguration(ctx, conn, d.Id())
 	})
 
+	// RM-4400 - more descriptive 403 errors
+	if tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusForbidden) {
+		log.Printf("[WARN] permissions error on S3 Bucket (%s) while getting bucket replication configuration: %s", d.Id(), err)
+	}
+
+	// The S3 API method calls above can occasionally return no error (i.e. NoSuchBucket)
+	// after a bucket has been deleted (eventual consistency woes :/), thus, when making extra S3 API calls
+	// such as GetBucketReplication, the error should be caught for non-new buckets as follows.
 	if !d.IsNewResource() && tfawserr.ErrCodeEquals(err, errCodeNoSuchBucket) {
 		log.Printf("[WARN] S3 Bucket (%s) not found, removing from state", d.Id())
 		d.SetId("")
@@ -1060,6 +1143,14 @@ func resourceBucketRead(ctx context.Context, d *schema.ResourceData, meta interf
 		return findServerSideEncryptionConfiguration(ctx, conn, d.Id(), "")
 	})
 
+	// RM-4400 - more descriptive 403 errors
+	if tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusForbidden) {
+		log.Printf("[WARN] permissions error on S3 Bucket (%s) while getting SSE encryption configuration: %s", d.Id(), err)
+	}
+
+	// The S3 API method calls above can occasionally return no error (i.e. NoSuchBucket)
+	// after a bucket has been deleted (eventual consistency woes :/), thus, when making extra S3 API calls
+	// such as GetBucketEncryption, the error should be caught for non-new buckets as follows.
 	if !d.IsNewResource() && tfawserr.ErrCodeEquals(err, errCodeNoSuchBucket) {
 		log.Printf("[WARN] S3 Bucket (%s) not found, removing from state", d.Id())
 		d.SetId("")
@@ -1099,6 +1190,8 @@ func resourceBucketRead(ctx context.Context, d *schema.ResourceData, meta interf
 	case tfresource.NotFound(err), tfawserr.ErrCodeEquals(err, errCodeMethodNotAllowed, errCodeNotImplemented, errCodeXNotImplemented):
 		d.Set("object_lock_configuration", nil)
 		d.Set("object_lock_enabled", nil)
+	case tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusForbidden): // RM-4400 - more descriptive 403 errors
+		log.Printf("[WARN] permissions error on S3 Bucket (%s) while getting object lock configuration: %s", d.Id(), err)
 	default:
 		if partition := meta.(*conns.AWSClient).Partition; partition == names.StandardPartitionID || partition == names.USGovCloudPartitionID {
 			return diag.Errorf("reading S3 Bucket (%s) object lock configuration: %s", d.Id(), err)
@@ -1119,6 +1212,11 @@ func resourceBucketRead(ctx context.Context, d *schema.ResourceData, meta interf
 		log.Printf("[WARN] S3 Bucket (%s) not found, removing from state", d.Id())
 		d.SetId("")
 		return diags
+	}
+
+	// RM-4400 - more descriptive 403 errors
+	if tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusForbidden) {
+		log.Printf("[WARN] permissions error on S3 Bucket (%s) while discovering region: %s", d.Id(), err)
 	}
 
 	if err != nil {
@@ -1591,15 +1689,20 @@ func resourceBucketDelete(ctx context.Context, d *schema.ResourceData, meta inte
 }
 
 func findBucket(ctx context.Context, conn *s3.Client, bucket string, optFns ...func(*s3.Options)) error {
-	input := &s3.HeadBucketInput{
+	// RM-4400 - remove HeadBucket because it requires s3:ListBucket permission
+	input := &s3.GetBucketEncryptionInput{
 		Bucket: aws.String(bucket),
 	}
 
-	_, err := conn.HeadBucket(ctx, input, optFns...)
+	// RM-4400 - remove HeadBucket because it requires s3:ListBucket permission
+	_, err := conn.GetBucketEncryption(ctx, input, optFns...)
 
-	// For directory buckets that no longer exist it's the CreateSession call invoked by HeadBucket that returns "NoSuchBucket",
-	// and that error code is flattend into HeadBucket's error message -- hence the 'errs.Contains' call.
-	if tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusNotFound) || tfawserr.ErrCodeEquals(err, errCodeNoSuchBucket) || errs.Contains(err, errCodeNoSuchBucket) {
+	// RM-4400 - more descriptive 403 errors
+	if tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusForbidden) {
+		log.Printf("permissions error on S3 Bucket (%s) while getting encryption configuration: %s", bucket, err)
+	}
+
+	if tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusNotFound) || tfawserr.ErrCodeEquals(err, errCodeNoSuchBucket) || tfawserr.ErrCodeEquals(err, errCodeServerSideEncryptionConfigurationNotFound) {
 		return &retry.NotFoundError{
 			LastError:   err,
 			LastRequest: input,

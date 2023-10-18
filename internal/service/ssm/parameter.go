@@ -220,7 +220,7 @@ func resourceParameterRead(ctx context.Context, d *schema.ResourceData, meta int
 
 	input := &ssm.GetParameterInput{
 		Name:           aws.String(d.Id()),
-		WithDecryption: aws.Bool(true),
+		WithDecryption: aws.Bool(false),
 	}
 
 	var resp *ssm.GetParameterOutput
