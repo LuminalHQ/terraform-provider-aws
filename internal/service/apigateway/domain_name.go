@@ -105,8 +105,6 @@ func ResourceDomainName() *schema.Resource {
 							Type:     schema.TypeList,
 							Required: true,
 							MinItems: 1,
-							// BadRequestException: Cannot create an api with multiple Endpoint Types
-							MaxItems: 1,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 								ValidateFunc: validation.StringInSlice([]string{

@@ -79,7 +79,7 @@ func ResourceVPCEndpointService() *schema.Resource {
 			"network_load_balancer_arns": {
 				Type:     schema.TypeSet,
 				Optional: true,
-				MinItems: 1,
+				// MinItems: 1,
 				Elem: &schema.Schema{
 					Type:         schema.TypeString,
 					ValidateFunc: verify.ValidARN,

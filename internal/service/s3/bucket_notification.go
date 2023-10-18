@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -462,6 +463,11 @@ func findBucketNotificationConfiguration(ctx context.Context, conn *s3.Client, b
 	}
 
 	output, err := conn.GetBucketNotificationConfiguration(ctx, input)
+
+	// RM-4400 - more descriptive 403 errors
+	if tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusForbidden) {
+		log.Printf("[WARN] permissions error on S3 Bucket (%s) while getting notification configuration: %s", bucket, err)
+	}
 
 	if tfawserr.ErrCodeEquals(err, errCodeNoSuchBucket) {
 		return nil, &retry.NotFoundError{

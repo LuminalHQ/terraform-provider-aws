@@ -143,7 +143,8 @@ func ResourceDirectory() *schema.Resource {
 			},
 			"password": {
 				Type:      schema.TypeString,
-				Required:  true,
+				Optional:  true,
+				Computed:  true,
 				ForceNew:  true,
 				Sensitive: true,
 			},

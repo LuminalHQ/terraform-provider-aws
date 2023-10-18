@@ -6,6 +6,7 @@ package s3
 import (
 	"context"
 	"log"
+	"net/http"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -153,6 +154,11 @@ func findBucketPolicy(ctx context.Context, conn *s3.Client, bucket string) (stri
 	}
 
 	output, err := conn.GetBucketPolicy(ctx, input)
+
+	// RM-4400 - more descriptive 403 errors
+	if tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusForbidden) {
+		log.Printf("[WARN] permissions error on S3 Bucket (%s) while getting policy configuration: %s", bucket, err)
+	}
 
 	if tfawserr.ErrCodeEquals(err, errCodeNoSuchBucket, errCodeNoSuchBucketPolicy) {
 		return "", &retry.NotFoundError{

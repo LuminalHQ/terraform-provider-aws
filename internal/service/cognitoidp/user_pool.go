@@ -942,6 +942,14 @@ func resourceUserPoolRead(ctx context.Context, d *schema.ResourceData, meta inte
 
 	setTagsOut(ctx, userPool.UserPoolTags)
 
+	// Set mfa_configuration the existing way if available
+	if resp.UserPool.MfaConfiguration != nil {
+		d.Set("mfa_configuration", *resp.UserPool.MfaConfiguration)
+	}
+
+	// Try to fetch it via the new operation and set mfa_configuration / software_token_mfa_configuration
+	// This requires new permissions to succeed
+
 	input := &cognitoidentityprovider.GetUserPoolMfaConfigInput{
 		UserPoolId: aws.String(d.Id()),
 	}

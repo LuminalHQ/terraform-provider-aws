@@ -35,6 +35,7 @@ import (
 	"github.com/hashicorp/terraform-provider-aws/internal/tfresource"
 	"github.com/hashicorp/terraform-provider-aws/internal/verify"
 	"github.com/hashicorp/terraform-provider-aws/names"
+	"github.com/hashicorp/terraform/helper/resource"
 )
 
 // @SDKResource("aws_instance", name="Instance")
@@ -68,6 +69,31 @@ func ResourceInstance() *schema.Resource {
 				Optional:     true,
 				AtLeastOneOf: []string{"ami", "launch_template"},
 			},
+
+			// Snyk: custom attributes begin
+
+			"ami_owner_id": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+
+			"ami_creation_date": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+
+			"ami_platform_details": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+
+			"launch_time": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+
+			// Snyk: custom attributes end
+
 			"arn": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -1160,6 +1186,13 @@ func resourceInstanceRead(ctx context.Context, d *schema.ResourceData, meta inte
 		d.Set("iam_instance_profile", nil)
 	}
 
+	if err := readImageAttributes(d, conn); err != nil {
+		return err
+	}
+	if instance.LaunchTime != nil {
+		d.Set("launch_time", instance.LaunchTime.Format(time.RFC3339))
+	}
+
 	{
 		launchTemplate, err := flattenInstanceLaunchTemplate(ctx, conn, d.Id(), d.Get("launch_template.0.version").(string))
 
@@ -2048,8 +2081,61 @@ func disableInstanceAPIStop(ctx context.Context, conn *ec2.EC2, id string, disab
 	return nil
 }
 
-func disableInstanceAPITermination(ctx context.Context, conn *ec2.EC2, id string, disableAPITermination bool) error {
-	_, err := conn.ModifyInstanceAttributeWithContext(ctx, &ec2.ModifyInstanceAttributeInput{
+func readImageAttributes(d *schema.ResourceData, conn *ec2.EC2) error {
+
+	imageID := d.Get("ami").(string)
+	var image *ec2.Image
+
+	err := resource.Retry(1*time.Minute, func() *resource.RetryError {
+		res, err := conn.DescribeImages(&ec2.DescribeImagesInput{
+			ImageIds: []*string{aws.String(imageID)},
+		})
+		if isResourceTimeoutError(err) {
+			return resource.RetryableError(err)
+		}
+		if tfawserr.ErrCodeEquals(err, "InvalidAMIID.Unavailable") || tfawserr.ErrCodeEquals(err, "InvalidAMIID.NotFound") {
+			return nil
+		}
+		if err != nil {
+			return resource.NonRetryableError(err)
+		}
+		if len(res.Images) == 0 {
+			return nil
+		}
+		image = res.Images[0]
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("Unable to describe AMI after retries: %s", err)
+	}
+	// Don't fail the refresh if the AMI was not found
+	if image == nil {
+		return nil
+	}
+
+	if image.OwnerId != nil {
+		d.Set("ami_owner_id", image.OwnerId)
+	}
+	if image.PlatformDetails != nil {
+		d.Set("ami_platform_details", image.PlatformDetails)
+	}
+	if image.CreationDate != nil {
+		d.Set("ami_creation_date", image.CreationDate)
+	}
+	return nil
+}
+
+func isResourceTimeoutError(err error) bool {
+	timeoutErr, ok := err.(*resource.TimeoutError)
+	return ok && timeoutErr.LastError == nil
+}
+
+func resourceInstanceDisableAPITermination(conn *ec2.EC2, id string, disableAPITermination bool) error {
+	// false = enable api termination
+	// true = disable api termination (protected)
+
+	_, err := conn.ModifyInstanceAttribute(&ec2.ModifyInstanceAttributeInput{
+		InstanceId: aws.String(id),
 		DisableApiTermination: &ec2.AttributeBooleanValue{
 			Value: aws.Bool(disableAPITermination),
 		},
@@ -2220,6 +2306,10 @@ func readBlockDevicesFromInstance(ctx context.Context, d *schema.ResourceData, i
 		VolumeIds: volIDs,
 	})
 	if err != nil {
+		if tfawserr.ErrCodeEquals(err, errCodeInvalidVolumeNotFound) && tfawserr.ErrMessageContains(err, "does not exist") {
+			log.Print("[WARN] Unable to describe volumes attached to instance")
+			return blockDevices, nil
+		}
 		return nil, err
 	}
 
@@ -2291,6 +2381,9 @@ func FetchRootDeviceName(ctx context.Context, conn *ec2.EC2, amiID string) (*str
 
 	image, err := FindImageByID(ctx, conn, amiID)
 
+	if tfawserr.ErrCodeEquals(err, errCodeInvalidAMIIDUnavailable) || tfawserr.ErrCodeEquals(err, "InvalidAMIID.NotFound") {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

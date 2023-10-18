@@ -514,7 +514,7 @@ func resourceNetworkInterfaceRead(ctx context.Context, d *schema.ResourceData, m
 		Resource:  fmt.Sprintf("network-interface/%s", d.Id()),
 	}.String()
 	d.Set("arn", arn)
-	if eni.Attachment != nil {
+	if eni.Attachment != nil && eni.Attachment.DeviceIndex != nil && eni.Attachment.AttachmentId != nil {
 		if err := d.Set("attachment", []interface{}{flattenNetworkInterfaceAttachment(eni.Attachment)}); err != nil {
 			return sdkdiag.AppendErrorf(diags, "setting attachment: %s", err)
 		}

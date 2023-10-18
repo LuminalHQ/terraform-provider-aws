@@ -249,60 +249,60 @@ func resourceOrganizationRead(ctx context.Context, d *schema.ResourceData, meta 
 		return sdkdiag.AppendErrorf(diags, "reading Organization: %s", err)
 	}
 
-	accounts, err := findAccounts(ctx, conn)
+	// accounts, err := findAccounts(ctx, conn)
 
-	if err != nil {
-		return sdkdiag.AppendErrorf(diags, "reading Organization (%s) accounts: %s", d.Id(), err)
-	}
+	// if err != nil {
+	// 	return sdkdiag.AppendErrorf(diags, "reading Organization (%s) accounts: %s", d.Id(), err)
+	// }
 
-	managementAccountID := aws.StringValue(org.MasterAccountId)
-	nonManagementAccounts := tfslices.Filter(accounts, func(v *organizations.Account) bool {
-		return aws.StringValue(v.Id) != managementAccountID
-	})
+	// managementAccountID := aws.StringValue(org.MasterAccountId)
+	// nonManagementAccounts := tfslices.Filter(accounts, func(v *organizations.Account) bool {
+	// 	return aws.StringValue(v.Id) != managementAccountID
+	// })
 
-	roots, err := findRoots(ctx, conn)
+	// roots, err := findRoots(ctx, conn)
 
-	if err != nil {
-		return sdkdiag.AppendErrorf(diags, "reading Organization (%s) roots: %s", d.Id(), err)
-	}
+	// if err != nil {
+	// 	return sdkdiag.AppendErrorf(diags, "reading Organization (%s) roots: %s", d.Id(), err)
+	// }
 
-	if err := d.Set("accounts", flattenAccounts(accounts)); err != nil {
-		return sdkdiag.AppendErrorf(diags, "setting accounts: %s", err)
-	}
+	// if err := d.Set("accounts", flattenAccounts(accounts)); err != nil {
+	// 	return sdkdiag.AppendErrorf(diags, "setting accounts: %s", err)
+	// }
 	d.Set("arn", org.Arn)
 	d.Set("feature_set", org.FeatureSet)
 	d.Set("master_account_arn", org.MasterAccountArn)
 	d.Set("master_account_email", org.MasterAccountEmail)
 	d.Set("master_account_id", org.MasterAccountId)
-	if err := d.Set("non_master_accounts", flattenAccounts(nonManagementAccounts)); err != nil {
-		return sdkdiag.AppendErrorf(diags, "setting non_master_accounts: %s", err)
-	}
-	if err := d.Set("roots", flattenRoots(roots)); err != nil {
-		return sdkdiag.AppendErrorf(diags, "setting roots: %s", err)
-	}
+	// if err := d.Set("non_master_accounts", flattenAccounts(nonManagementAccounts)); err != nil {
+	// 	return sdkdiag.AppendErrorf(diags, "setting non_master_accounts: %s", err)
+	// }
+	// if err := d.Set("roots", flattenRoots(roots)); err != nil {
+	// 	return sdkdiag.AppendErrorf(diags, "setting roots: %s", err)
+	// }
 
-	var awsServiceAccessPrincipals []string
+	// var awsServiceAccessPrincipals []string
 
 	// ConstraintViolationException: The request failed because the organization does not have all features enabled. Please enable all features in your organization and then retry.
-	if aws.StringValue(org.FeatureSet) == organizations.OrganizationFeatureSetAll {
-		awsServiceAccessPrincipals, err = FindEnabledServicePrincipalNames(ctx, conn)
+	// if aws.StringValue(org.FeatureSet) == organizations.OrganizationFeatureSetAll {
+	// 	awsServiceAccessPrincipals, err = FindEnabledServicePrincipalNames(ctx, conn)
 
-		if err != nil {
-			return sdkdiag.AppendErrorf(diags, "reading Organization (%s) service principals: %s", d.Id(), err)
-		}
-	}
+	// 	if err != nil {
+	// 		return sdkdiag.AppendErrorf(diags, "reading Organization (%s) service principals: %s", d.Id(), err)
+	// 	}
+	// }
 
-	d.Set("aws_service_access_principals", awsServiceAccessPrincipals)
+	// d.Set("aws_service_access_principals", awsServiceAccessPrincipals)
 
-	var enabledPolicyTypes []string
+	// var enabledPolicyTypes []string
 
-	for _, policyType := range roots[0].PolicyTypes {
-		if aws.StringValue(policyType.Status) == organizations.PolicyTypeStatusEnabled {
-			enabledPolicyTypes = append(enabledPolicyTypes, aws.StringValue(policyType.Type))
-		}
-	}
+	// for _, policyType := range roots[0].PolicyTypes {
+	// 	if aws.StringValue(policyType.Status) == organizations.PolicyTypeStatusEnabled {
+	// 		enabledPolicyTypes = append(enabledPolicyTypes, aws.StringValue(policyType.Type))
+	// 	}
+	// }
 
-	d.Set("enabled_policy_types", enabledPolicyTypes)
+	// d.Set("enabled_policy_types", enabledPolicyTypes)
 
 	return diags
 }

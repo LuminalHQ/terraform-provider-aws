@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strconv"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -312,7 +311,7 @@ func flattenMetricTransformation(apiObject *cloudwatchlogs.MetricTransformation)
 	tfMap := map[string]interface{}{}
 
 	if v := apiObject.DefaultValue; v != nil {
-		tfMap["default_value"] = strconv.FormatFloat(aws.Float64Value(v), 'f', -1, 64)
+		tfMap["default_value"] = fmt.Sprintf("%v", apiObject.DefaultValue)
 	}
 
 	if v := apiObject.Dimensions; v != nil {

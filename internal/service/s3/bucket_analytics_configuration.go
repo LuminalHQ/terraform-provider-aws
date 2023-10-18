@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -434,6 +435,11 @@ func findAnalyticsConfiguration(ctx context.Context, conn *s3.Client, bucket, id
 	}
 
 	output, err := conn.GetBucketAnalyticsConfiguration(ctx, input)
+
+	// RM-4400 - more descriptive 403 errors
+	if tfawserr.ErrHTTPStatusCodeEquals(err, http.StatusForbidden) {
+		log.Printf("[WARN] permissions error on S3 Bucket (%s) while getting analytics configuration: %s", id, err)
+	}
 
 	if tfawserr.ErrCodeEquals(err, errCodeNoSuchBucket, errCodeNoSuchConfiguration) {
 		return nil, &retry.NotFoundError{
