@@ -1,110 +1,71 @@
-name: Release
+name: Build TF Provider
 
-on:
-  push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+*'
-
-permissions:
-  contents: write
+on: [push]
 
 jobs:
-  release-notes:
-    runs-on: macos-latest
+  build:
+    # we need to use the same Ubuntu version as our final Docker (base) image
+    # is using in order to match glibc versions. We need glibc because we
+    # compile a dynamically-linked binary with boringcrypto.
+    runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+      # https://github.com/orgs/community/discussions/25678#discussioncomment-5242449
+      - name: Delete huge unnecessary tools folder
+        run: rm -rf /opt/hostedtoolcache
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v4
         with:
-          fetch-depth: 0
-      - name: Generate Release Notes
-        run: sed -n -e "1{/# /d;}" -e "2{/^$/d;}" -e "/# $(git describe --abbrev=0 --exclude="$(git describe --abbrev=0 --match='v*.*.*' --tags)" --match='v*.*.*' --tags | tr -d v)/q;p" CHANGELOG.md > release-notes.txt
-      - uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
-        with:
-          name: release-notes
-          path: release-notes.txt
-          retention-days: 1
-  terraform-provider-release:
-    name: 'Terraform Provider Release'
-    needs: [release-notes]
-    uses: hashicorp/ghaction-terraform-provider-release/.github/workflows/hashicorp.yml@v3
-    secrets:
-      hc-releases-key-prod: '${{ secrets.HC_RELEASES_KEY_PROD }}'
-      hc-releases-key-staging: '${{ secrets.HC_RELEASES_KEY_STAGING }}'
-      hc-releases-github-token: '${{ secrets.HASHI_RELEASES_GITHUB_TOKEN }}'
-      hc-releases-terraform-registry-sync-token: '${{ secrets.TF_PROVIDER_RELEASE_TERRAFORM_REGISTRY_SYNC_TOKEN }}'
-      setup-signore-github-token: '${{ secrets.HASHI_SIGNORE_GITHUB_TOKEN }}'
-      signore-client-id: '${{ secrets.SIGNORE_CLIENT_ID }}'
-      signore-client-secret: '${{ secrets.SIGNORE_CLIENT_SECRET }}'
-      hc-releases-host-staging: '${{ secrets.HC_RELEASES_HOST_STAGING }}'
-      hc-releases-host-prod: '${{ secrets.HC_RELEASES_HOST_PROD }}'
-    with:
-      goreleaser-release-args: '--timeout 3h --parallelism 4'
-      release-notes: true
-      setup-go-version-file: go.mod
-      # Product Version (e.g. v1.2.3 or github.ref_name)
-      product-version: '${{ github.ref_name }}'
-  highest-version-tag:
-    needs: [terraform-provider-release]
-    runs-on: macos-latest
-    outputs:
-      tag: ${{ steps.highest-version-tag.outputs.tag }}
-    steps:
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
-        with:
-          # Allow tag to be fetched when ref is a commit
-          fetch-depth: 0
-      - name: Output highest version tag
-        id: highest-version-tag
+          go-version: 1.21.3
+      - name: Install C toolchain
         run: |
-          HIGHEST=$(git tag | sort -V | tail -1)
-          echo "tag=$HIGHEST" >> "$GITHUB_OUTPUT"
-  changelog-newversion:
-    needs: [terraform-provider-release, highest-version-tag]
-    # write new changelog header only if release tag is the $HIGHEST i.e. exists on main
-    # and not a backport release branch (e.g. release/3.x). This results in
-    # manually updating the CHANGELOG header if releasing from the non-default branch.
-    # TODO: find a more deterministic way to determine release branch from tag commit
-    if: github.ref_name == needs.highest-version-tag.outputs.tag
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+          sudo apt-get update
+          sudo apt install -y gcc-x86-64-linux-gnu
+          mkdir bin
+      - name: Cache Binaries
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-binaries
         with:
-          fetch-depth: 0
-          ref: main
-      - name: Update Changelog Header
+          path: bin
+          key: ${{ github.sha }}
+          restore-keys: ${{ github.sha }}
+      - name: Build Linux x86_64 binary with Boringcrypto
         run: |
-          CHANGELOG_FILE_NAME="CHANGELOG.md"
-          PREVIOUS_RELEASE_TAG=${{ github.ref_name }}
-
-          # Add Release Date
-          RELEASE_DATE=`date +%B' '%e', '%Y`
-          sed -i -e "1 s/Unreleased/$RELEASE_DATE/" $CHANGELOG_FILE_NAME
-
-          # Prepend next release line
-          echo Previous release is: $PREVIOUS_RELEASE_TAG
-
-          NEW_RELEASE_LINE=$(echo $PREVIOUS_RELEASE_TAG | awk -F. '{
-              $1 = substr($1,2)
-              $2 += 1
-              printf("%s.%01d.0\n\n", $1, $2);
-          }')
-
-          echo New minor version is: v$NEW_RELEASE_LINE
-
-          echo -e "## $NEW_RELEASE_LINE (Unreleased)\n$(cat $CHANGELOG_FILE_NAME)" > $CHANGELOG_FILE_NAME
-      - run: |
-            git config --local user.email changelogbot@hashicorp.com
-            git config --local user.name changelogbot
-            git add CHANGELOG.md
-            git commit -m "Update CHANGELOG.md after ${{ github.ref_name }}"
-            git push
-  upload-tag-before-post-publish:
-    needs: [terraform-provider-release]
+          CC=x86_64-linux-gnu-gcc CGO_ENABLED=1 GOARCH=amd64 GOOS=linux GOEXPERIMENT=boringcrypto \
+          go build -o bin/terraform-provider-aws.linux.amd64 .
+      - name: Verify Boringcrypto
+        run: |
+          go run rsc.io/goversion@master -crypto bin/terraform-provider-aws.linux.amd64 | grep -q '(boring crypto)'
+      # boringcrypto isn't available for darwin, so we can also disable CGO.
+      - name: Build Darwin arm64 binary without Boringcrypto
+        run: |
+          CGO_ENABLED=0 GOARCH=arm64 GOOS=darwin \
+          go build -o bin/terraform-provider-aws.darwin.arm64 .
+      - name: Build Darwin x86_64 binary without Boringcrypto
+        run: |
+          CGO_ENABLED=0 GOARCH=amd64 GOOS=darwin \
+          go build -o bin/terraform-provider-aws.darwin.amd64 .
+  release:
     runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/snyk'
+    permissions:
+      contents: write
     steps:
-      - name: Save Release Tag
-        run: echo ${{ github.ref_name }} > release-tag.data
-      - uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+      - uses: actions/checkout@v4
+      - name: Cache Binaries
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-binaries
         with:
-          name: release-tag
-          path: release-tag.data
-          retention-days: 1
+          path: bin
+          key: ${{ github.sha }}
+          restore-keys: ${{ github.sha }}
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: v0.0.0-${{ github.sha }}
+          commit: ${{ github.sha }}
+          artifacts: bin/terraform-provider-aws.*.*
+          makeLatest: true
