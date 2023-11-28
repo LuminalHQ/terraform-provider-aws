@@ -27,7 +27,7 @@ jobs:
           path: bin
           key: ${{ github.sha }}
           restore-keys: ${{ github.sha }}
-      - name: Build Linux binary with Boringcrypto
+      - name: Build Linux x86_64 binary with Boringcrypto
         run: |
           CC=x86_64-linux-gnu-gcc CGO_ENABLED=1 GOARCH=amd64 GOOS=linux GOEXPERIMENT=boringcrypto \
           go build -o bin/terraform-provider-aws.linux.amd64 .
@@ -35,10 +35,14 @@ jobs:
         run: |
           go run rsc.io/goversion@master -crypto bin/terraform-provider-aws.linux.amd64 | grep -q '(boring crypto)'
       # boringcrypto isn't available for darwin, so we can also disable CGO.
-      - name: Build Darwin binary without Boringcrypto
+      - name: Build Darwin arm64 binary without Boringcrypto
         run: |
           CGO_ENABLED=0 GOARCH=arm64 GOOS=darwin \
           go build -o bin/terraform-provider-aws.darwin.arm64 .
+      - name: Build Darwin x86_64 binary without Boringcrypto
+        run: |
+          CGO_ENABLED=0 GOARCH=amd64 GOOS=darwin \
+          go build -o bin/terraform-provider-aws.darwin.amd64 .
   release:
     runs-on: ubuntu-latest
     needs: build
