@@ -36,7 +36,8 @@ func TestAccEC2EIP_basic(t *testing.T) {
 				Config: testAccEIPConfig_basic,
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckEIPExists(ctx, resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "domain", "vpc"),
+					resource.TestCheckResourceAttrSet(resourceName, names.AttrARN),
+					resource.TestCheckResourceAttr(resourceName, names.AttrDomain, "vpc"),
 					resource.TestCheckResourceAttr(resourceName, "ptr_record", ""),
 					resource.TestCheckResourceAttrSet(resourceName, "public_ip"),
 					testAccCheckEIPPublicDNS(ctx, resourceName),
@@ -94,7 +95,7 @@ func TestAccEC2EIP_migrateVPCToDomain(t *testing.T) {
 				Config: testAccEIPConfig_vpc,
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckEIPExists(ctx, resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "domain", "vpc"),
+					resource.TestCheckResourceAttr(resourceName, names.AttrDomain, "vpc"),
 					resource.TestCheckResourceAttrSet(resourceName, "public_ip"),
 					testAccCheckEIPPublicDNS(ctx, resourceName),
 				),
@@ -123,7 +124,7 @@ func TestAccEC2EIP_noVPC(t *testing.T) {
 				Config: testAccEIPConfig_noVPC,
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckEIPExists(ctx, resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "domain", "vpc"),
+					resource.TestCheckResourceAttr(resourceName, names.AttrDomain, "vpc"),
 					resource.TestCheckResourceAttrSet(resourceName, "public_ip"),
 					testAccCheckEIPPublicDNS(ctx, resourceName),
 				),
@@ -149,11 +150,11 @@ func TestAccEC2EIP_tags(t *testing.T) {
 		CheckDestroy:             testAccCheckEIPDestroy(ctx),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccEIPConfig_tags1("key1", "value1"),
+				Config: testAccEIPConfig_tags1(acctest.CtKey1, acctest.CtValue1),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckEIPExists(ctx, resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "tags.%", "1"),
-					resource.TestCheckResourceAttr(resourceName, "tags.key1", "value1"),
+					resource.TestCheckResourceAttr(resourceName, acctest.CtTagsPercent, acctest.Ct1),
+					resource.TestCheckResourceAttr(resourceName, acctest.CtTagsKey1, acctest.CtValue1),
 				),
 			},
 			{
@@ -162,20 +163,20 @@ func TestAccEC2EIP_tags(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
-				Config: testAccEIPConfig_tags2("key1", "value1updated", "key2", "value2"),
+				Config: testAccEIPConfig_tags2(acctest.CtKey1, acctest.CtValue1Updated, acctest.CtKey2, acctest.CtValue2),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckEIPExists(ctx, resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "tags.%", "2"),
-					resource.TestCheckResourceAttr(resourceName, "tags.key1", "value1updated"),
-					resource.TestCheckResourceAttr(resourceName, "tags.key2", "value2"),
+					resource.TestCheckResourceAttr(resourceName, acctest.CtTagsPercent, acctest.Ct2),
+					resource.TestCheckResourceAttr(resourceName, acctest.CtTagsKey1, acctest.CtValue1Updated),
+					resource.TestCheckResourceAttr(resourceName, acctest.CtTagsKey2, acctest.CtValue2),
 				),
 			},
 			{
-				Config: testAccEIPConfig_tags1("key2", "value2"),
+				Config: testAccEIPConfig_tags1(acctest.CtKey2, acctest.CtValue2),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckEIPExists(ctx, resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "tags.%", "1"),
-					resource.TestCheckResourceAttr(resourceName, "tags.key2", "value2"),
+					resource.TestCheckResourceAttr(resourceName, acctest.CtTagsPercent, acctest.Ct1),
+					resource.TestCheckResourceAttr(resourceName, acctest.CtTagsKey2, acctest.CtValue2),
 				),
 			},
 		},
@@ -199,7 +200,7 @@ func TestAccEC2EIP_instance(t *testing.T) {
 				Config: testAccEIPConfig_instance(rName),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckEIPExists(ctx, resourceName, &conf),
-					resource.TestCheckResourceAttrPair(resourceName, "instance", instanceResourceName, "id"),
+					resource.TestCheckResourceAttrPair(resourceName, "instance", instanceResourceName, names.AttrID),
 					resource.TestCheckResourceAttrSet(resourceName, "public_ip"),
 				),
 			},
@@ -231,14 +232,14 @@ func TestAccEC2EIP_Instance_reassociate(t *testing.T) {
 				Config: testAccEIPConfig_instanceReassociate(rName),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckEIPExists(ctx, resourceName, &conf),
-					resource.TestCheckResourceAttrPair(resourceName, "instance", instanceResourceName, "id"),
+					resource.TestCheckResourceAttrPair(resourceName, "instance", instanceResourceName, names.AttrID),
 				),
 			},
 			{
 				Config: testAccEIPConfig_instanceReassociate(rName),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckEIPExists(ctx, resourceName, &conf),
-					resource.TestCheckResourceAttrPair(resourceName, "instance", instanceResourceName, "id"),
+					resource.TestCheckResourceAttrPair(resourceName, "instance", instanceResourceName, names.AttrID),
 				),
 				Taint: []string{resourceName},
 			},
@@ -267,7 +268,7 @@ func TestAccEC2EIP_Instance_associatedUserPrivateIP(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckEIPExists(ctx, resourceName, &conf),
 					resource.TestCheckResourceAttrSet(resourceName, "association_id"),
-					resource.TestCheckResourceAttrPair(resourceName, "instance", instance1ResourceName, "id"),
+					resource.TestCheckResourceAttrPair(resourceName, "instance", instance1ResourceName, names.AttrID),
 					resource.TestCheckResourceAttrSet(resourceName, "public_ip"),
 				),
 			},
@@ -282,7 +283,7 @@ func TestAccEC2EIP_Instance_associatedUserPrivateIP(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckEIPExists(ctx, resourceName, &conf),
 					resource.TestCheckResourceAttrSet(resourceName, "association_id"),
-					resource.TestCheckResourceAttrPair(resourceName, "instance", instance2ResourceName, "id"),
+					resource.TestCheckResourceAttrPair(resourceName, "instance", instance2ResourceName, names.AttrID),
 					resource.TestCheckResourceAttrSet(resourceName, "public_ip"),
 				),
 			},
@@ -322,7 +323,7 @@ func TestAccEC2EIP_Instance_notAssociated(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckEIPExists(ctx, resourceName, &conf),
 					resource.TestCheckResourceAttrSet(resourceName, "association_id"),
-					resource.TestCheckResourceAttrPair(resourceName, "instance", instanceResourceName, "id"),
+					resource.TestCheckResourceAttrPair(resourceName, "instance", instanceResourceName, names.AttrID),
 					resource.TestCheckResourceAttrSet(resourceName, "public_ip"),
 				),
 			},
@@ -420,7 +421,7 @@ func TestAccEC2EIP_association(t *testing.T) {
 					testAccCheckEIPExists(ctx, resourceName, &conf),
 					resource.TestCheckResourceAttrSet(resourceName, "association_id"),
 					resource.TestCheckResourceAttr(resourceName, "instance", ""),
-					resource.TestCheckResourceAttrPair(resourceName, "network_interface", eniResourceName, "id"),
+					resource.TestCheckResourceAttrPair(resourceName, "network_interface", eniResourceName, names.AttrID),
 					resource.TestCheckResourceAttrSet(resourceName, "public_ip"),
 				),
 			},
@@ -429,7 +430,7 @@ func TestAccEC2EIP_association(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckEIPExists(ctx, resourceName, &conf),
 					resource.TestCheckResourceAttrSet(resourceName, "association_id"),
-					resource.TestCheckResourceAttrPair(resourceName, "instance", instanceResourceName, "id"),
+					resource.TestCheckResourceAttrPair(resourceName, "instance", instanceResourceName, names.AttrID),
 					resource.TestCheckResourceAttrPair(resourceName, "network_interface", instanceResourceName, "primary_network_interface_id"),
 					resource.TestCheckResourceAttrSet(resourceName, "public_ip"),
 				),
