@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/aws-sdk-go-base/v2/tfawserr"
@@ -48,12 +49,16 @@ func resourceEIP() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"address": {
+			names.AttrAddress: {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
 			},
 			"allocation_id": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			names.AttrARN: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
@@ -77,7 +82,7 @@ func resourceEIP() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
-			"domain": {
+			names.AttrDomain: {
 				Type:             schema.TypeString,
 				ForceNew:         true,
 				Optional:         true,
@@ -135,7 +140,7 @@ func resourceEIP() *schema.Resource {
 				ForceNew:      true,
 				Computed:      true,
 				Deprecated:    "use domain attribute instead",
-				ConflictsWith: []string{"domain"},
+				ConflictsWith: []string{names.AttrDomain},
 			},
 		},
 	}
@@ -149,7 +154,7 @@ func resourceEIPCreate(ctx context.Context, d *schema.ResourceData, meta interfa
 		TagSpecifications: getTagSpecificationsInV2(ctx, types.ResourceTypeElasticIp),
 	}
 
-	if v, ok := d.GetOk("address"); ok {
+	if v, ok := d.GetOk(names.AttrAddress); ok {
 		input.Address = aws.String(v.(string))
 	}
 
@@ -157,7 +162,7 @@ func resourceEIPCreate(ctx context.Context, d *schema.ResourceData, meta interfa
 		input.CustomerOwnedIpv4Pool = aws.String(v.(string))
 	}
 
-	if v := d.Get("domain"); v != nil && v.(string) != "" {
+	if v := d.Get(names.AttrDomain); v != nil && v.(string) != "" {
 		input.Domain = types.DomainType(v.(string))
 	}
 
@@ -226,12 +231,14 @@ func resourceEIPRead(ctx context.Context, d *schema.ResourceData, meta interface
 	}
 
 	address := outputRaw.(*types.Address)
-	d.Set("allocation_id", address.AllocationId)
+	allocationID := aws.ToString(address.AllocationId)
+	d.Set("allocation_id", allocationID)
+	d.Set(names.AttrARN, eipARN(meta.(*conns.AWSClient), allocationID))
 	d.Set("association_id", address.AssociationId)
 	d.Set("carrier_ip", address.CarrierIp)
 	d.Set("customer_owned_ip", address.CustomerOwnedIp)
 	d.Set("customer_owned_ipv4_pool", address.CustomerOwnedIpv4Pool)
-	d.Set("domain", address.Domain)
+	d.Set(names.AttrDomain, address.Domain)
 	d.Set("instance", address.InstanceId)
 	d.Set("network_border_group", address.NetworkBorderGroup)
 	d.Set("network_interface", address.NetworkInterfaceId)
@@ -404,4 +411,14 @@ func disassociateEIP(ctx context.Context, conn *ec2.Client, associationID string
 	}
 
 	return nil
+}
+
+func eipARN(c *conns.AWSClient, allocationID string) string {
+	return arn.ARN{
+		Partition: c.Partition,
+		Service:   names.EC2,
+		Region:    c.Region,
+		AccountID: c.AccountID,
+		Resource:  "elastic-ip/" + allocationID,
+	}.String()
 }

@@ -56,7 +56,7 @@ func ResourceDirectory() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"alias": {
+			names.AttrAlias: {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
@@ -69,7 +69,7 @@ func ResourceDirectory() *schema.Resource {
 				ForceNew: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"availability_zones": {
+						names.AttrAvailabilityZones: {
 							Type:     schema.TypeSet,
 							Computed: true,
 							Elem:     &schema.Schema{Type: schema.TypeString},
@@ -93,13 +93,13 @@ func ResourceDirectory() *schema.Resource {
 							Required: true,
 							ForceNew: true,
 						},
-						"subnet_ids": {
+						names.AttrSubnetIDs: {
 							Type:     schema.TypeSet,
 							Required: true,
 							ForceNew: true,
 							Elem:     &schema.Schema{Type: schema.TypeString},
 						},
-						"vpc_id": {
+						names.AttrVPCID: {
 							Type:     schema.TypeString,
 							Required: true,
 							ForceNew: true,
@@ -107,7 +107,7 @@ func ResourceDirectory() *schema.Resource {
 					},
 				},
 			},
-			"description": {
+			names.AttrDescription: {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
@@ -135,13 +135,13 @@ func ResourceDirectory() *schema.Resource {
 				Optional: true,
 				Default:  false,
 			},
-			"name": {
+			names.AttrName: {
 				Type:         schema.TypeString,
 				Required:     true,
 				ForceNew:     true,
 				ValidateFunc: domainValidator,
 			},
-			"password": {
+			names.AttrPassword: {
 				Type:      schema.TypeString,
 				Optional:  true,
 				Computed:  true,
@@ -158,7 +158,7 @@ func ResourceDirectory() *schema.Resource {
 				Computed: true,
 				ForceNew: true,
 			},
-			"size": {
+			names.AttrSize: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
@@ -167,7 +167,7 @@ func ResourceDirectory() *schema.Resource {
 			},
 			names.AttrTags:    tftags.TagsSchema(),
 			names.AttrTagsAll: tftags.TagsSchemaComputed(),
-			"type": {
+			names.AttrType: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      directoryservice.DirectoryTypeSimpleAd,
@@ -181,18 +181,18 @@ func ResourceDirectory() *schema.Resource {
 				ForceNew: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"availability_zones": {
+						names.AttrAvailabilityZones: {
 							Type:     schema.TypeSet,
 							Computed: true,
 							Elem:     &schema.Schema{Type: schema.TypeString},
 						},
-						"subnet_ids": {
+						names.AttrSubnetIDs: {
 							Type:     schema.TypeSet,
 							Required: true,
 							ForceNew: true,
 							Elem:     &schema.Schema{Type: schema.TypeString},
 						},
-						"vpc_id": {
+						names.AttrVPCID: {
 							Type:     schema.TypeString,
 							Required: true,
 							ForceNew: true,
@@ -210,9 +210,9 @@ func resourceDirectoryCreate(ctx context.Context, d *schema.ResourceData, meta i
 	var diags diag.Diagnostics
 	conn := meta.(*conns.AWSClient).DSConn(ctx)
 
-	name := d.Get("name").(string)
+	name := d.Get(names.AttrName).(string)
 	var creator directoryCreator
-	switch directoryType := d.Get("type").(string); directoryType {
+	switch directoryType := d.Get(names.AttrType).(string); directoryType {
 	case directoryservice.DirectoryTypeAdconnector:
 		creator = adConnectorCreator{}
 
@@ -236,8 +236,8 @@ func resourceDirectoryCreate(ctx context.Context, d *schema.ResourceData, meta i
 			if use, ok := errs.As[*retry.UnexpectedStateError](err); ok {
 				if use.State == directoryservice.DirectoryStageFailed {
 					tflog.Info(ctx, "retrying failed Directory creation", map[string]any{
-						"directory_id": d.Id(),
-						"domain_name":  name,
+						"directory_id":       d.Id(),
+						names.AttrDomainName: name,
 					})
 					_, deleteErr := conn.DeleteDirectoryWithContext(ctx, &directoryservice.DeleteDirectoryInput{
 						DirectoryId: aws.String(d.Id()),
@@ -260,7 +260,7 @@ func resourceDirectoryCreate(ctx context.Context, d *schema.ResourceData, meta i
 		return sdkdiag.AppendFromErr(diags, fmt.Errorf("creating Directory Service %s Directory (%s): %w", creator.TypeName(), name, err))
 	}
 
-	if v, ok := d.GetOk("alias"); ok {
+	if v, ok := d.GetOk(names.AttrAlias); ok {
 		if err := createAlias(ctx, conn, d.Id(), v.(string)); err != nil {
 			return sdkdiag.AppendFromErr(diags, err)
 		}
@@ -298,7 +298,7 @@ func resourceDirectoryRead(ctx context.Context, d *schema.ResourceData, meta int
 	}
 
 	d.Set("access_url", dir.AccessUrl)
-	d.Set("alias", dir.Alias)
+	d.Set(names.AttrAlias, dir.Alias)
 	if dir.ConnectSettings != nil {
 		if err := d.Set("connect_settings", []interface{}{flattenDirectoryConnectSettingsDescription(dir.ConnectSettings, dir.DnsIpAddrs)}); err != nil {
 			return sdkdiag.AppendErrorf(diags, "setting connect_settings: %s", err)
@@ -306,7 +306,7 @@ func resourceDirectoryRead(ctx context.Context, d *schema.ResourceData, meta int
 	} else {
 		d.Set("connect_settings", nil)
 	}
-	d.Set("description", dir.Description)
+	d.Set(names.AttrDescription, dir.Description)
 	d.Set("desired_number_of_domain_controllers", dir.DesiredNumberOfDomainControllers)
 	if aws.StringValue(dir.Type) == directoryservice.DirectoryTypeAdconnector {
 		d.Set("dns_ip_addresses", aws.StringValueSlice(dir.ConnectSettings.ConnectIps))
@@ -315,7 +315,7 @@ func resourceDirectoryRead(ctx context.Context, d *schema.ResourceData, meta int
 	}
 	d.Set("edition", dir.Edition)
 	d.Set("enable_sso", dir.SsoEnabled)
-	d.Set("name", dir.Name)
+	d.Set(names.AttrName, dir.Name)
 	if aws.StringValue(dir.Type) == directoryservice.DirectoryTypeAdconnector {
 		d.Set("security_group_id", dir.ConnectSettings.SecurityGroupId)
 	} else {
@@ -329,8 +329,8 @@ func resourceDirectoryRead(ctx context.Context, d *schema.ResourceData, meta int
 		}
 	}
 	d.Set("short_name", dir.ShortName)
-	d.Set("size", dir.Size)
-	d.Set("type", dir.Type)
+	d.Set(names.AttrSize, dir.Size)
+	d.Set(names.AttrType, dir.Type)
 	if dir.VpcSettings != nil {
 		if err := d.Set("vpc_settings", []interface{}{flattenDirectoryVpcSettingsDescription(dir.VpcSettings)}); err != nil {
 			return sdkdiag.AppendErrorf(diags, "setting vpc_settings: %s", err)
@@ -407,7 +407,7 @@ func (c adConnectorCreator) TypeName() string {
 func (c adConnectorCreator) Create(ctx context.Context, conn *directoryservice.DirectoryService, name string, d *schema.ResourceData) error {
 	input := &directoryservice.ConnectDirectoryInput{
 		Name:     aws.String(name),
-		Password: aws.String(d.Get("password").(string)),
+		Password: aws.String(d.Get(names.AttrPassword).(string)),
 		Tags:     getTagsIn(ctx),
 	}
 
@@ -415,11 +415,11 @@ func (c adConnectorCreator) Create(ctx context.Context, conn *directoryservice.D
 		input.ConnectSettings = expandDirectoryConnectSettings(v.([]interface{})[0].(map[string]interface{}))
 	}
 
-	if v, ok := d.GetOk("description"); ok {
+	if v, ok := d.GetOk(names.AttrDescription); ok {
 		input.Description = aws.String(v.(string))
 	}
 
-	if v, ok := d.GetOk("size"); ok {
+	if v, ok := d.GetOk(names.AttrSize); ok {
 		input.Size = aws.String(v.(string))
 	} else {
 		// Matching previous behavior of Default: "Large" for Size attribute.
@@ -450,11 +450,11 @@ func (c microsoftADCreator) TypeName() string {
 func (c microsoftADCreator) Create(ctx context.Context, conn *directoryservice.DirectoryService, name string, d *schema.ResourceData) error {
 	input := &directoryservice.CreateMicrosoftADInput{
 		Name:     aws.String(name),
-		Password: aws.String(d.Get("password").(string)),
+		Password: aws.String(d.Get(names.AttrPassword).(string)),
 		Tags:     getTagsIn(ctx),
 	}
 
-	if v, ok := d.GetOk("description"); ok {
+	if v, ok := d.GetOk(names.AttrDescription); ok {
 		input.Description = aws.String(v.(string))
 	}
 
@@ -490,15 +490,15 @@ func (c simpleADCreator) TypeName() string {
 func (c simpleADCreator) Create(ctx context.Context, conn *directoryservice.DirectoryService, name string, d *schema.ResourceData) error {
 	input := &directoryservice.CreateDirectoryInput{
 		Name:     aws.String(name),
-		Password: aws.String(d.Get("password").(string)),
+		Password: aws.String(d.Get(names.AttrPassword).(string)),
 		Tags:     getTagsIn(ctx),
 	}
 
-	if v, ok := d.GetOk("description"); ok {
+	if v, ok := d.GetOk(names.AttrDescription); ok {
 		input.Description = aws.String(v.(string))
 	}
 
-	if v, ok := d.GetOk("size"); ok {
+	if v, ok := d.GetOk(names.AttrSize); ok {
 		input.Size = aws.String(v.(string))
 	} else {
 		// Matching previous behavior of Default: "Large" for Size attribute.
@@ -646,11 +646,11 @@ func expandDirectoryConnectSettings(tfMap map[string]interface{}) *directoryserv
 		apiObject.CustomerUserName = aws.String(v)
 	}
 
-	if v, ok := tfMap["subnet_ids"].(*schema.Set); ok && v.Len() > 0 {
+	if v, ok := tfMap[names.AttrSubnetIDs].(*schema.Set); ok && v.Len() > 0 {
 		apiObject.SubnetIds = flex.ExpandStringSet(v)
 	}
 
-	if v, ok := tfMap["vpc_id"].(string); ok && v != "" {
+	if v, ok := tfMap[names.AttrVPCID].(string); ok && v != "" {
 		apiObject.VpcId = aws.String(v)
 	}
 
@@ -665,7 +665,7 @@ func flattenDirectoryConnectSettingsDescription(apiObject *directoryservice.Dire
 	tfMap := map[string]interface{}{}
 
 	if v := apiObject.AvailabilityZones; v != nil {
-		tfMap["availability_zones"] = aws.StringValueSlice(v)
+		tfMap[names.AttrAvailabilityZones] = aws.StringValueSlice(v)
 	}
 
 	if v := apiObject.ConnectIps; v != nil {
@@ -681,11 +681,11 @@ func flattenDirectoryConnectSettingsDescription(apiObject *directoryservice.Dire
 	}
 
 	if v := apiObject.SubnetIds; v != nil {
-		tfMap["subnet_ids"] = aws.StringValueSlice(v)
+		tfMap[names.AttrSubnetIDs] = aws.StringValueSlice(v)
 	}
 
 	if v := apiObject.VpcId; v != nil {
-		tfMap["vpc_id"] = aws.StringValue(v)
+		tfMap[names.AttrVPCID] = aws.StringValue(v)
 	}
 
 	return tfMap
@@ -698,11 +698,11 @@ func expandDirectoryVpcSettings(tfMap map[string]interface{}) *directoryservice.
 
 	apiObject := &directoryservice.DirectoryVpcSettings{}
 
-	if v, ok := tfMap["subnet_ids"].(*schema.Set); ok && v.Len() > 0 {
+	if v, ok := tfMap[names.AttrSubnetIDs].(*schema.Set); ok && v.Len() > 0 {
 		apiObject.SubnetIds = flex.ExpandStringSet(v)
 	}
 
-	if v, ok := tfMap["vpc_id"].(string); ok && v != "" {
+	if v, ok := tfMap[names.AttrVPCID].(string); ok && v != "" {
 		apiObject.VpcId = aws.String(v)
 	}
 
@@ -717,11 +717,11 @@ func flattenDirectoryVpcSettings(apiObject *directoryservice.DirectoryVpcSetting
 	tfMap := map[string]interface{}{}
 
 	if v := apiObject.SubnetIds; v != nil {
-		tfMap["subnet_ids"] = aws.StringValueSlice(v)
+		tfMap[names.AttrSubnetIDs] = aws.StringValueSlice(v)
 	}
 
 	if v := apiObject.VpcId; v != nil {
-		tfMap["vpc_id"] = aws.StringValue(v)
+		tfMap[names.AttrVPCID] = aws.StringValue(v)
 	}
 
 	return tfMap
@@ -735,15 +735,15 @@ func flattenDirectoryVpcSettingsDescription(apiObject *directoryservice.Director
 	tfMap := map[string]interface{}{}
 
 	if v := apiObject.AvailabilityZones; v != nil {
-		tfMap["availability_zones"] = aws.StringValueSlice(v)
+		tfMap[names.AttrAvailabilityZones] = aws.StringValueSlice(v)
 	}
 
 	if v := apiObject.SubnetIds; v != nil {
-		tfMap["subnet_ids"] = aws.StringValueSlice(v)
+		tfMap[names.AttrSubnetIDs] = aws.StringValueSlice(v)
 	}
 
 	if v := apiObject.VpcId; v != nil {
-		tfMap["vpc_id"] = aws.StringValue(v)
+		tfMap[names.AttrVPCID] = aws.StringValue(v)
 	}
 
 	return tfMap

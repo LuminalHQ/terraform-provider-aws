@@ -159,7 +159,7 @@ func (p *servicePackage) SDKResources(ctx context.Context) []*types.ServicePacka
 			TypeName: "aws_iam_instance_profile",
 			Name:     "Instance Profile",
 			Tags: &types.ServicePackageResourceTags{
-				IdentifierAttribute: "id",
+				IdentifierAttribute: names.AttrID,
 				ResourceType:        "InstanceProfile",
 			},
 		},
@@ -168,7 +168,7 @@ func (p *servicePackage) SDKResources(ctx context.Context) []*types.ServicePacka
 			TypeName: "aws_iam_openid_connect_provider",
 			Name:     "OIDC Provider",
 			Tags: &types.ServicePackageResourceTags{
-				IdentifierAttribute: "id",
+				IdentifierAttribute: names.AttrID,
 				ResourceType:        "OIDCProvider",
 			},
 		},
@@ -177,7 +177,7 @@ func (p *servicePackage) SDKResources(ctx context.Context) []*types.ServicePacka
 			TypeName: "aws_iam_policy",
 			Name:     "Policy",
 			Tags: &types.ServicePackageResourceTags{
-				IdentifierAttribute: "id",
+				IdentifierAttribute: names.AttrID,
 				ResourceType:        "Policy",
 			},
 		},
@@ -191,7 +191,7 @@ func (p *servicePackage) SDKResources(ctx context.Context) []*types.ServicePacka
 			TypeName: "aws_iam_role",
 			Name:     "Role",
 			Tags: &types.ServicePackageResourceTags{
-				IdentifierAttribute: "id",
+				IdentifierAttribute: names.AttrID,
 				ResourceType:        "Role",
 			},
 		},
@@ -210,7 +210,7 @@ func (p *servicePackage) SDKResources(ctx context.Context) []*types.ServicePacka
 			TypeName: "aws_iam_saml_provider",
 			Name:     "SAML Provider",
 			Tags: &types.ServicePackageResourceTags{
-				IdentifierAttribute: "id",
+				IdentifierAttribute: names.AttrID,
 				ResourceType:        "SAMLProvider",
 			},
 		},
@@ -224,7 +224,7 @@ func (p *servicePackage) SDKResources(ctx context.Context) []*types.ServicePacka
 			TypeName: "aws_iam_server_certificate",
 			Name:     "Server Certificate",
 			Tags: &types.ServicePackageResourceTags{
-				IdentifierAttribute: "name",
+				IdentifierAttribute: names.AttrName,
 				ResourceType:        "ServerCertificate",
 			},
 		},
@@ -233,7 +233,7 @@ func (p *servicePackage) SDKResources(ctx context.Context) []*types.ServicePacka
 			TypeName: "aws_iam_service_linked_role",
 			Name:     "Service Linked Role",
 			Tags: &types.ServicePackageResourceTags{
-				IdentifierAttribute: "id",
+				IdentifierAttribute: names.AttrID,
 				ResourceType:        "ServiceLinkedRole",
 			},
 		},
@@ -252,7 +252,7 @@ func (p *servicePackage) SDKResources(ctx context.Context) []*types.ServicePacka
 			TypeName: "aws_iam_user",
 			Name:     "User",
 			Tags: &types.ServicePackageResourceTags{
-				IdentifierAttribute: "id",
+				IdentifierAttribute: names.AttrID,
 				ResourceType:        "User",
 			},
 		},
@@ -286,7 +286,7 @@ func (p *servicePackage) SDKResources(ctx context.Context) []*types.ServicePacka
 			TypeName: "aws_iam_virtual_mfa_device",
 			Name:     "Virtual MFA Device",
 			Tags: &types.ServicePackageResourceTags{
-				IdentifierAttribute: "id",
+				IdentifierAttribute: names.AttrID,
 				ResourceType:        "VirtualMFADevice",
 			},
 		},
@@ -302,7 +302,7 @@ func (p *servicePackage) NewClient(ctx context.Context, config map[string]any) (
 	cfg := *(config["aws_sdkv2_config"].(*aws_sdkv2.Config))
 
 	return iam_sdkv2.NewFromConfig(cfg, func(o *iam_sdkv2.Options) {
-		if endpoint := config["endpoint"].(string); endpoint != "" {
+		if endpoint := config[names.AttrEndpoint].(string); endpoint != "" {
 			o.BaseEndpoint = aws_sdkv2.String(endpoint)
 		}
 	}), nil

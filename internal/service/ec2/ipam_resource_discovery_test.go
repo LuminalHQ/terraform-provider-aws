@@ -24,15 +24,15 @@ func TestAccIPAMResourceDiscovery_serial(t *testing.T) {
 
 	testCases := map[string]map[string]func(t *testing.T){
 		"ResourceDiscovery": {
-			"basic":      testAccIPAMResourceDiscovery_basic,
-			"modify":     testAccIPAMResourceDiscovery_modify,
-			"disappears": testAccIPAMResourceDiscovery_disappears,
-			"tags":       testAccIPAMResourceDiscovery_tags,
+			acctest.CtBasic: testAccIPAMResourceDiscovery_basic,
+			"modify":        testAccIPAMResourceDiscovery_modify,
+			"disappears":    testAccIPAMResourceDiscovery_disappears,
+			"tags":          testAccIPAMResourceDiscovery_tags,
 		},
 		"ResourceDiscoveryAssociation": {
-			"basic":      testAccIPAMResourceDiscoveryAssociation_basic,
-			"disappears": testAccIPAMResourceDiscoveryAssociation_disappears,
-			"tags":       testAccIPAMResourceDiscoveryAssociation_tags,
+			acctest.CtBasic: testAccIPAMResourceDiscoveryAssociation_basic,
+			"disappears":    testAccIPAMResourceDiscoveryAssociation_disappears,
+			"tags":          testAccIPAMResourceDiscoveryAssociation_tags,
 		},
 	}
 
@@ -55,13 +55,13 @@ func testAccIPAMResourceDiscovery_basic(t *testing.T) {
 				Config: testAccIPAMResourceDiscoveryConfig_base,
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckIPAMResourceDiscoveryExists(ctx, resourceName, &rd),
-					acctest.MatchResourceAttrGlobalARN(resourceName, "arn", "ec2", regexache.MustCompile(`ipam-resource-discovery/ipam-res-disco-[0-9a-f]+$`)),
-					resource.TestCheckResourceAttr(resourceName, "description", "test"),
-					resource.TestCheckResourceAttrPair(resourceName, "ipam_resource_discovery_region", dataSourceRegion, "name"),
+					acctest.MatchResourceAttrGlobalARN(resourceName, names.AttrARN, "ec2", regexache.MustCompile(`ipam-resource-discovery/ipam-res-disco-[0-9a-f]+$`)),
+					resource.TestCheckResourceAttr(resourceName, names.AttrDescription, "test"),
+					resource.TestCheckResourceAttrPair(resourceName, "ipam_resource_discovery_region", dataSourceRegion, names.AttrName),
 					resource.TestCheckResourceAttr(resourceName, "is_default", "false"),
-					resource.TestCheckResourceAttr(resourceName, "operating_regions.#", "1"),
-					acctest.CheckResourceAttrAccountID(resourceName, "owner_id"),
-					resource.TestCheckResourceAttr(resourceName, "tags.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "operating_regions.#", acctest.Ct1),
+					acctest.CheckResourceAttrAccountID(resourceName, names.AttrOwnerID),
+					resource.TestCheckResourceAttr(resourceName, acctest.CtTagsPercent, acctest.Ct0),
 				),
 			},
 			{
@@ -91,7 +91,7 @@ func testAccIPAMResourceDiscovery_modify(t *testing.T) {
 				Config: testAccIPAMResourceDiscoveryConfig_base,
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckIPAMResourceDiscoveryExists(ctx, resourceName, &rd),
-					resource.TestCheckResourceAttr(resourceName, "description", "test"),
+					resource.TestCheckResourceAttr(resourceName, names.AttrDescription, "test"),
 				),
 			},
 			{
@@ -102,19 +102,19 @@ func testAccIPAMResourceDiscovery_modify(t *testing.T) {
 			{
 				Config: testAccIPAMResourceDiscoveryConfig_operatingRegion(),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "description", "test"),
+					resource.TestCheckResourceAttr(resourceName, names.AttrDescription, "test"),
 				),
 			},
 			{
 				Config: testAccIPAMResourceDiscoveryConfig_base,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "description", "test"),
+					resource.TestCheckResourceAttr(resourceName, names.AttrDescription, "test"),
 				),
 			},
 			{
 				Config: testAccIPAMResourceDiscoveryConfig_baseAlternateDescription,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "description", "test ipam"),
+					resource.TestCheckResourceAttr(resourceName, names.AttrDescription, "test ipam"),
 				),
 			},
 		},
@@ -156,11 +156,11 @@ func testAccIPAMResourceDiscovery_tags(t *testing.T) {
 		CheckDestroy:             testAccCheckIPAMResourceDiscoveryDestroy(ctx),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccIPAMResourceDiscoveryConfig_tags("key1", "value1"),
+				Config: testAccIPAMResourceDiscoveryConfig_tags(acctest.CtKey1, acctest.CtValue1),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckIPAMResourceDiscoveryExists(ctx, resourceName, &rd),
-					resource.TestCheckResourceAttr(resourceName, "tags.%", "1"),
-					resource.TestCheckResourceAttr(resourceName, "tags.key1", "value1"),
+					resource.TestCheckResourceAttr(resourceName, acctest.CtTagsPercent, acctest.Ct1),
+					resource.TestCheckResourceAttr(resourceName, acctest.CtTagsKey1, acctest.CtValue1),
 				),
 			},
 			{
@@ -169,18 +169,18 @@ func testAccIPAMResourceDiscovery_tags(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
-				Config: testAccIPAMResourceDiscoveryConfig_tags2("key1", "value1updated", "key2", "value2"),
+				Config: testAccIPAMResourceDiscoveryConfig_tags2(acctest.CtKey1, acctest.CtValue1Updated, acctest.CtKey2, acctest.CtValue2),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "tags.%", "2"),
-					resource.TestCheckResourceAttr(resourceName, "tags.key1", "value1updated"),
-					resource.TestCheckResourceAttr(resourceName, "tags.key2", "value2"),
+					resource.TestCheckResourceAttr(resourceName, acctest.CtTagsPercent, acctest.Ct2),
+					resource.TestCheckResourceAttr(resourceName, acctest.CtTagsKey1, acctest.CtValue1Updated),
+					resource.TestCheckResourceAttr(resourceName, acctest.CtTagsKey2, acctest.CtValue2),
 				),
 			},
 			{
-				Config: testAccIPAMResourceDiscoveryConfig_tags("key2", "value2"),
+				Config: testAccIPAMResourceDiscoveryConfig_tags(acctest.CtKey2, acctest.CtValue2),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "tags.%", "1"),
-					resource.TestCheckResourceAttr(resourceName, "tags.key2", "value2"),
+					resource.TestCheckResourceAttr(resourceName, acctest.CtTagsPercent, acctest.Ct1),
+					resource.TestCheckResourceAttr(resourceName, acctest.CtTagsKey2, acctest.CtValue2),
 				),
 			},
 		},
