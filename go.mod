@@ -1,5 +1,11 @@
 module github.com/hashicorp/terraform-provider-aws
 
+// ----------------------------------------------------------------------------------------------------
+// DO NOT update to go 1.24 due to missing P521 elliptic used for the self-signed
+// certs between any client and terraform-aws-provider. The mTLS certs that we use:
+// https://github.com/hashicorp/go-plugin/blob/cfdf485783602a2ca85502dedebf441be7bcbc8d/mtls.go#L21-L24
+// ----------------------------------------------------------------------------------------------------
+
 go 1.23.0
 
 toolchain go1.23.6
